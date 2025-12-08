@@ -25,3 +25,6 @@ on dtoa-benchmark.
 | null           | 0.932     | 957.80x  |
 
 <img width="769" height="347" alt="image" src="https://github.com/user-attachments/assets/d3cc3e54-a70e-45a1-997e-ed86181dde87" />
+
+<img width="874" height="657" alt="image" src="https://github.com/user-attachments/assets/f12205dc-4154-4fac-955b-adf4a080bb0f" />
+
