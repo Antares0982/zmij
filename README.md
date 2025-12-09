@@ -8,7 +8,7 @@ Improvements:
 * Faster division and modulo
 * More efficient digit generation
 
-More than 2x faster than Ryu and 50% faster than [Shubfach](https://github.com/vitaut/schubfach)
+More than 2x faster than Ryu and 50% faster than [Schubfach](https://github.com/vitaut/schubfach)
 on dtoa-benchmark.
 
 | Function       | Time (ns) | Speedup  |
