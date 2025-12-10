@@ -2,7 +2,9 @@
 // Copyright (c) 2025 - present, Victor Zverovich
 // Distributed under the MIT license (see LICENSE).
 
-#include "zmij.h"
+#if __has_include("zmij.h")
+#  include "zmij.h"
+#endif
 
 #include <assert.h>  // assert
 #include <stdint.h>  // uint64_t
@@ -800,7 +802,9 @@ void write(char* buffer, uint64_t dec_sig, int dec_exp) noexcept {
 
 }  // namespace
 
-void zmij::dtoa(double value, char* buffer) noexcept {
+namespace zmij {
+
+void dtoa(double value, char* buffer) noexcept {
   uint64_t bits = std::bit_cast<uint64_t>(value);
   *buffer = '-';
   buffer += bits >> 63;
@@ -902,3 +906,5 @@ void zmij::dtoa(double value, char* buffer) noexcept {
   bool under_closer = cmp < 0 || cmp == 0 && (dec_sig_under & 1) == 0;
   return write(buffer, under_closer ? dec_sig_under : dec_sig_over, dec_exp);
 }
+
+}  // namespace zmij
