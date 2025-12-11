@@ -891,6 +891,7 @@ void dtoa(double value, char* buffer) noexcept {
           bin_sig_lsb;
 
   // The idea of using a single shorter candidate is by Cassio Neri.
+  // It is less or equal to the upper bound by construction.
   uint64_t shorter = 10 * ((upper >> 2) / 10);
   if ((shorter << 2) >= lower) return write(buffer, shorter, dec_exp);
 
@@ -903,7 +904,7 @@ void dtoa(double value, char* buffer) noexcept {
   // the rounding interval.
   int64_t cmp = int64_t(scaled_sig - ((dec_sig_under + dec_sig_over) << 1));
   bool under_closer = cmp < 0 || (cmp == 0 && (dec_sig_under & 1) == 0);
-  bool under_in = lower <= (dec_sig_under << 2);
+  bool under_in = (dec_sig_under << 2) >= lower;
   write(buffer, (under_closer & under_in) ? dec_sig_under : dec_sig_over,
         dec_exp);
 }
