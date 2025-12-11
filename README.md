@@ -28,22 +28,22 @@ More than 3x faster than [Ryu](https://github.com/ulfjack/ryu) and ~2x faster
 than [Schubfach](https://github.com/vitaut/schubfach)
 on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark).
 
-| Function     | Time (ns) | Speedup  |
-|--------------|----------:|---------:|
-| ostringstream| 896.099   | 1.00x    |
-| sprintf      | 749.617   | 1.20x    |
-| doubleconv   | 87.886    | 10.20x   |
-| to_chars     | 43.602    | 20.55x   |
-| ryu          | 40.061    | 22.37x   |
-| schubfach    | 25.196    | 35.57x   |
-| fmt          | 23.828    | 37.61x   |
-| dragonbox    | 21.992    | 40.75x   |
-| zmij         | 12.839    | 69.79x   |
-| null         | 0.971     | 923.25x  |
+| Function      | Time (ns) | Speedup |
+|---------------|----------:|--------:|
+| ostringstream |   902.796 |   1.00x |
+| sprintf       |   737.769 |   1.22x |
+| doubleconv    |    85.790 |  10.52x |
+| to_chars      |    42.779 |  21.10x |
+| ryu           |    38.631 |  23.37x |
+| schubfach     |    25.292 |  35.69x |
+| fmt           |    22.384 |  40.33x |
+| dragonbox     |    21.162 |  42.66x |
+| zmij          |    12.360 |  73.04x |
+| null          |     0.957 | 943.30x |
 
-<img width="788" height="347" alt="image" src="https://github.com/user-attachments/assets/0e3de579-09b7-448e-b1de-b247a31c83c4" />
+<img width="772" height="334" alt="image" src="https://github.com/user-attachments/assets/64fe6e67-d921-4d96-8702-21fa8de909d9" />
 
-<img width="882" height="666" alt="image" src="https://github.com/user-attachments/assets/7119c447-6cb2-4b04-9e75-33c19dbf75fb" />
+<img width="862" height="655" alt="image" src="https://github.com/user-attachments/assets/2efc55cd-d93c-45d5-93a6-fa6846273ade" />
 
 Differences from Schubfach:
 * Selection from 1-3 candidates instead of 2-4
