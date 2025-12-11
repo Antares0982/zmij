@@ -2,12 +2,12 @@
 
 A double-to-string conversion algorithm based on Schubfach
 
-Improvements:
-* Faster logarithm approximations
-* Fewer branches
-* Faster division and modulo
-* More efficient significand and exponent output
-* Improved estimate selection
+## Features
+
+* High performance
+* Fast compile time
+* Zero dependencies
+* Small, clean codebase consisting of one source file and one header
 
 ## Usage
 
@@ -44,5 +44,9 @@ on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark).
 
 <img width="882" height="666" alt="image" src="https://github.com/user-attachments/assets/7119c447-6cb2-4b04-9e75-33c19dbf75fb" />
 
-
-
+Differences from Schubfach:
+* Selection from 1-3 candidates instead of 2-4
+* Faster logarithm approximations
+* Faster division and modulo
+* Fewer branches
+* More efficient significand and exponent output
