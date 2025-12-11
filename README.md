@@ -24,7 +24,8 @@ int main() {
 
 ## Performance
 
-More than 3x faster than Ryu and ~2x faster than [Schubfach](https://github.com/vitaut/schubfach)
+More than 3x faster than [Ryu](https://github.com/ulfjack/ryu) and ~2x faster
+than [Schubfach](https://github.com/vitaut/schubfach)
 on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark).
 
 | Function     | Time (ns) | Speedup  |
