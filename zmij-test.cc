@@ -1,6 +1,8 @@
-#include "zmij.h"
-#include <string>
+#include "zmij.cc"
+
 #include <gtest/gtest.h>
+
+#include <string>
 
 auto dtoa(double value) -> std::string {
   char buffer[zmij::buffer_size];
@@ -8,9 +10,16 @@ auto dtoa(double value) -> std::string {
   return buffer;
 }
 
-TEST(zmij_test, normal) {
-  EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34");
+TEST(zmij_test, umul192_upper64_modified) {
+  EXPECT_EQ(umul192_upper64_modified(0x7fbbd8fe5f5e6e27, 0x497a3a2704eec3df,
+                                     0x1234567890abcdef),
+            0x915528f3982917d);
+  EXPECT_EQ(umul192_upper64_modified(0x7fbbd8fe5f5e6e27, 0x497a3a2704eec3df,
+                                     0x1234567890abcdee),
+            0x915528f3982917d);
 }
+
+TEST(zmij_test, normal) { EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34"); }
 
 TEST(zmij_test, zero) {
   EXPECT_EQ(dtoa(0), "0");
@@ -37,7 +46,6 @@ TEST(zmij_test, single_candidate) {
   // Only an overestimate is in the rounding region (w in Schubfach).
   EXPECT_EQ(dtoa(6.079537928711555e+61), "6.079537928711555e+61");
 }
-
 
 auto main(int argc, char** argv) -> int {
   testing::InitGoogleTest(&argc, argv);

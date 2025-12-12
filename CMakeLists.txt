@@ -12,5 +12,5 @@ enable_testing()
 add_subdirectory(gtest)
 
 add_executable(zmij-test zmij-test.cc)
-target_link_libraries(zmij-test gtest zmij)
+target_link_libraries(zmij-test gtest)
 add_test(NAME zmij-test COMMAND zmij-test)
