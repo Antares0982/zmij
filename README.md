@@ -55,6 +55,7 @@ on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark) run on Apple M1.
 
 Differences from Schubfach:
 * Selection from 1-3 candidates instead of 2-4
+* Fewer integer multiplications in the shorter case
 * Faster logarithm approximations
 * Faster division and modulo
 * Fewer conditional branches
