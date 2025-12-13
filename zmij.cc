@@ -732,7 +732,7 @@ inline void write2digits(char* buffer, uint32_t value) noexcept {
 }
 
 // Writes 4 digits and removes trailing zeros.
-auto write4digits(char* buffer, uint32_t value) noexcept -> char* {
+auto write4digits_trim_zeros(char* buffer, uint32_t value) noexcept -> char* {
   auto [aa, bb] = divmod100(value);
   write2digits(buffer + 0, aa);
   write2digits(buffer + 2, bb);
@@ -760,7 +760,7 @@ auto write_significand(char* buffer, uint64_t value) noexcept -> char* {
   buffer += 4;
 
   if (ffgghhii == 0) {
-    if (ddee != 0) return write4digits(buffer, ddee);
+    if (ddee != 0) return write4digits_trim_zeros(buffer, ddee);
     return buffer - num_trailing_zeros[cc] - (cc == 0) * num_trailing_zeros[bb];
   }
   auto [dd, ee] = divmod100(ddee);
@@ -771,7 +771,7 @@ auto write_significand(char* buffer, uint64_t value) noexcept -> char* {
   write2digits(buffer + 2, ee);
   write2digits(buffer + 4, ff);
   write2digits(buffer + 6, gg);
-  if (hhii != 0) return write4digits(buffer + 8, hhii);
+  if (hhii != 0) return write4digits_trim_zeros(buffer + 8, hhii);
   return buffer + 8 - num_trailing_zeros[gg] -
          (gg == 0) * num_trailing_zeros[ff];
 }
