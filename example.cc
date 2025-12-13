@@ -1,5 +1,6 @@
-#include "zmij.h"
 #include <stdio.h>
+
+#include "zmij.h"
 
 int main() {
   char buf[zmij::buffer_size];
