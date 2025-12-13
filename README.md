@@ -8,7 +8,7 @@ A double-to-string conversion algorithm based on [Schubfach](https://fmt.dev/pap
 * Shortest decimal representation
 * Correct rounding
 * High [performance](#performance)
-* Fast compile time
+* Fast [compile time](#compile-time)
 * Zero dependencies
 * Small, clean codebase consisting of one [source file](
   https://github.com/vitaut/zmij/blob/main/zmij.cc) and one [header](https://github.com/vitaut/zmij/blob/main/zmij.h)
@@ -53,6 +53,17 @@ on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark) run on Apple M1.
 <img width="862" height="655" alt="image"
      src="https://github.com/user-attachments/assets/2efc55cd-d93c-45d5-93a6-fa6846273ade" />
 
+## Compile time
+
+Compile time is ~60ms by default and ~68ms with optimizations enabled as measured by
+
+```
+% time c++ -c -std=c++20 schubfach.cc [-O2]
+```
+
+taking the best of 3 runs.
+
+
 Differences from Schubfach:
 * Selection from 1-3 candidates instead of 2-4
 * Fewer integer multiplications in the shorter case
@@ -60,3 +71,4 @@ Differences from Schubfach:
 * Faster division and modulo
 * Fewer conditional branches
 * More efficient significand and exponent output
+
