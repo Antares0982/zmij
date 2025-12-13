@@ -24,5 +24,5 @@ for dec_exp in range(-dec_exp_max, -dec_exp_min + 1, 1):
     else:
         result = dec_pow // bin_pow
     result = result + 1
-    hi, lo = result >> 63, (result & (2**63 - 1)) << 1
+    hi, lo = result >> 62, (result & (2**62 - 1)) << 2
     print(f"{{{hi:#x}, {lo:#018x}}}, // {dec_exp:4}")
