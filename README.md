@@ -72,4 +72,4 @@ taking the best of 3 runs.
 * Faster division and modulo
 * Fewer conditional branches
 * More efficient significand and exponent output
-
+* Simpler storage of powers of 10 significands
