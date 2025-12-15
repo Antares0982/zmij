@@ -11,9 +11,9 @@ auto dtoa(double value) -> std::string {
 }
 
 TEST(zmij_test, utilities) {
-  EXPECT_EQ(lzcntl(0), 64);
-  EXPECT_EQ(lzcntl(1), 63);
-  EXPECT_EQ(lzcntl(~0ull), 0);
+  EXPECT_EQ(count_lzero(0), 64);
+  EXPECT_EQ(count_lzero(1), 63);
+  EXPECT_EQ(count_lzero(~0ull), 0);
 
   EXPECT_EQ(count_trailing_nonzeros(0x30303030'30303030ull), 0);
   EXPECT_EQ(count_trailing_nonzeros(0x30303030'30303031ull), 1);

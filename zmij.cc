@@ -724,15 +724,15 @@ inline auto divmod100(uint32_t value) noexcept -> divmod_result {
   return {div, value - div * 100};
 }
 
-// MSVC makes lzcnt available always, but it's not constexpr.
-inline auto lzcntl(uint64_t x) noexcept -> size_t {
+inline auto count_lzero(uint64_t x) noexcept -> int {
 #ifdef _MSC_VER
+  // MSVC makes _lzcnt_u64 available always, but it's not constexpr.
   return _lzcnt_u64(x);
 #else
   // Unlike MSVC, clang and gcc recognize this implementation and replace
   // it with the assembly instructions which are appropriate for the
   // target (lzcnt or bsr + zero handling).
-  size_t n = 64;
+  int n = 64;
   while (x > 0) {
     x >>= 1;
     --n;
@@ -748,16 +748,16 @@ inline auto count_trailing_nonzeros(uint64_t x) noexcept -> size_t {
   // We count the number of characters until there are only '0' == 0x30
   // characters left.
   // The code is equivalent to
-  //   return 8 - lzcntl(x & ~0x30303030'30303030) / 8
+  //   return 8 - count_lzero(x & ~0x30303030'30303030) / 8
   // but if the BSR instruction is emitted, subtracting the constant
   // before dividing allows combining it with the subtraction from BSR
   // counting in the opposite direction.
-  //   return size_t(71 - lzcntl(x & ~0x30303030'30303030)) / 8;
+  //   return size_t(71 - count_lzero(x & ~0x30303030'30303030)) / 8;
   // Additionally, the bsr instruction requires a zero check.  Since the
   // high bit is never set we can avoid the zero check by shifting the
   // datum left by one and using XOR to both remove the 0x30s and insert
   // a sentinel bit at the end.
-  return size_t(70 - lzcntl(x << 1 ^ (0x30303030'30303030ull << 1 | 1))) / 8;
+  return size_t(70 - count_lzero(x << 1 ^ (0x30303030'30303030ull << 1 | 1))) / 8;
 }
 
 inline void write2digits(void* buffer, uint32_t value) noexcept {
