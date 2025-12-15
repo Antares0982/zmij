@@ -773,10 +773,6 @@ inline auto count_trailing_nonzeros(uint64_t x) noexcept -> size_t {
   return size_t(70 - count_lzero((x << 1) ^ mask_with_sentinel)) / 8;
 }
 
-inline void write2digits(void* buffer, uint32_t value) noexcept {
-  memcpy(buffer, digits2(value), 2);
-}
-
 // Writes a significand consisting of 16 or 17 decimal digits and removes
 // trailing zeros.
 auto write_significand(char* buffer, uint64_t value) noexcept -> char* {
@@ -830,7 +826,7 @@ void write(char* buffer, uint64_t dec_sig, int dec_exp) noexcept {
   auto [a, bb] = divmod100(uint32_t(dec_exp));
   *buffer = char('0' + a);
   buffer += dec_exp >= 100;
-  write2digits(buffer, bb);
+  memcpy(buffer, digits2(bb), 2);
   buffer[2] = '\0';
 }
 
