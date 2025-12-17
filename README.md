@@ -69,8 +69,7 @@ taking the best of 3 runs.
 
 ## Differences from Schubfach
 
-* Selection from 1-3 candidates instead of 2-4
-* Fewer integer multiplications in the shorter case
+* 1 instead of 3 multiplications by powers of 10 in the common case
 * Faster logarithm approximations
 * Faster division and modulo
 * Fewer conditional branches
