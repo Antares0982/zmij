@@ -13,6 +13,10 @@
 
 #include <limits>  // std::numeric_limits
 
+#ifdef _MSC_VER
+#include <intrin.h> // lzcnt/adc/umul128/umulh
+#endif
+
 namespace {
 
 struct uint128 {
@@ -28,8 +32,14 @@ struct uint128 {
 };
 
 [[maybe_unused]] auto operator+(uint128 lhs, uint128 rhs) noexcept -> uint128 {
+#if defined(_MSC_VER) && defined(_M_AMD64)
+  uint64_t lo, hi;
+  _addcarry_u64(_addcarry_u64(0, lhs.lo, rhs.lo, &lo), lhs.hi, rhs.hi, &hi);
+  return {hi, lo};
+#else
   uint64_t lo = lhs.lo + rhs.lo;
   return {lhs.hi + rhs.hi + (lo < lhs.lo), lo};
+#endif
 }
 
 #ifdef __SIZEOF_INT128__
@@ -664,6 +674,14 @@ const uint128 pow10_significands[] = {
 inline auto umul128(uint64_t x, uint64_t y) noexcept -> uint128_t {
 #ifdef __SIZEOF_INT128__
   return uint128_t(x) * y;
+#elif defined(_MSC_VER) && defined(_M_AMD64)
+  uint64_t hi;
+  uint64_t lo = _umul128(x, y, &hi);
+  return {hi, lo};
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+  uint64_t hi = __umulh(x, y);
+  uint64_t lo = x * y;
+  return {hi, lo};
 #else
   uint64_t a = x >> 32;
   uint64_t b = uint32_t(x);
@@ -675,7 +693,7 @@ inline auto umul128(uint64_t x, uint64_t y) noexcept -> uint128_t {
   uint64_t ad = a * d;
   uint64_t bd = b * d;
 
-  uint64_t cs = uint32_t(ad) + uint32_t(bc) + (bd >> 32);  // cross sum
+  uint64_t cs = (bd >> 32) + uint32_t(ad) + uint32_t(bc);  // cross sum
   return {ac + (ad >> 32) + (bc >> 32) + (cs >> 32), (cs << 32) + uint32_t(bd)};
 #endif  // __SIZEOF_INT128__
 }
@@ -717,9 +735,14 @@ inline auto is_big_endian() noexcept -> bool {
 }
 
 inline auto count_lzero(uint64_t x) noexcept -> int {
-#ifdef _MSC_VER
-  // MSVC makes _lzcnt_u64 available always, but it's not constexpr.
-  return _lzcnt_u64(x);
+#if defined(_MSC_VER) && defined(__AVX2__)
+  // use lzcnt on MSVC only on AVX2 capable CPU's that all have this BMI instruction
+  return __lzcnt64(x);
+#elif defined(_MSC_VER)
+  // otherwise fallback to BSR instruction. Note that 0 is not allowed as input here
+  unsigned long idx;
+  _BitScanReverse64(&idx, x);
+  return 63 - idx;
 #else
   // Unlike MSVC, clang and gcc recognize this implementation and replace
   // it with the assembly instructions which are appropriate for the

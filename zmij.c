@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include <intrin.h> // lzcnt/adc/umul128/umulh
+#endif
+
 typedef struct {
   uint64_t hi;
   uint64_t lo;
@@ -20,11 +24,17 @@ typedef uint128 uint128_t;
 #endif
 
 static inline uint128 uint128_add(uint128 a, uint128 b) {
+#if defined(_MSC_VER) && defined(_M_AMD64)
+  uint128 r;
+  _addcarry_u64(_addcarry_u64(0, a.lo, b.lo, &r.lo), a.hi, b.hi, &r.hi);
+  return r;
+#else
   uint64_t lo = a.lo + b.lo;
   uint128 r;
   r.hi = a.hi + b.hi + (lo < a.lo);
   r.lo = lo;
   return r;
+#endif
 }
 
 static inline uint128 uint128_shr(uint128 x, int shift) {
@@ -658,6 +668,15 @@ static const uint128 pow10_significands[] = {
 static inline uint128_t umul128(uint64_t x, uint64_t y) {
 #if defined(__SIZEOF_INT128__)
   return (uint128_t)x * y;
+#elif defined(_MSC_VER) && defined(_M_AMD64)
+  uint128 r;
+  r.lo = _umul128(x, y, &r.hi);
+  return r;
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+  uint128 r;
+  r.hi = __umulh(x, y);
+  r.lo = x * y;
+  return r;
 #else
   uint64_t a = x >> 32;
   uint64_t b = (uint32_t)x;
@@ -669,7 +688,7 @@ static inline uint128_t umul128(uint64_t x, uint64_t y) {
   uint64_t ad = a * d;
   uint64_t bd = b * d;
 
-  uint64_t cs = (uint32_t)ad + (uint32_t)bc + (bd >> 32);
+  uint64_t cs = (bd >> 32) + (uint32_t)ad + (uint32_t)bc;
 
   uint128 r;
   r.hi = ac + (ad >> 32) + (bc >> 32) + (cs >> 32);
@@ -726,8 +745,12 @@ static inline bool is_big_endian(void) {
 }
 
 static inline int count_lzero(uint64_t x) {
-#if defined(_MSC_VER)
-  return (int)__lzcnt64(x);
+#if defined(_MSC_VER) && defined(__AVX2__)
+  return __lzcnt64(x);
+#elif defined(_MSC_VER)
+  unsigned long idx;
+  _BitScanReverse64(&idx, x);
+  return 63 - idx;
 #else
   int n = 64;
   while (x) {
@@ -874,7 +897,10 @@ void zmij_dtoa(double value, char* buffer) {
   // Handle small integers.
   if (bin_exp < 0 && bin_exp >= -num_sig_bits) {
     uint64_t f = bin_sig >> -bin_exp;
-    if ((f << -bin_exp) == bin_sig) return write(buffer, f, 0);
+    if ((f << -bin_exp) == bin_sig) {
+      write(buffer, f, 0);
+      return;
+    }
   }
 
   // Compute the decimal exponent as floor(log10(2**bin_exp)) if regular or
@@ -922,8 +948,8 @@ void zmij_dtoa(double value, char* buffer) {
       uint64_t shorter = r.hi - digit + round * 10;
       uint64_t longer = r.hi + (r.lo >= ((uint64_t)1 << 63));
 
-      return write(buffer, ((half_ulp >= rem10) + round) ? shorter : longer,
-                   dec_exp);
+      write(buffer, ((half_ulp >= rem10) + round) ? shorter : longer, dec_exp);
+      return;
     }
   }
 
@@ -944,7 +970,10 @@ void zmij_dtoa(double value, char* buffer) {
   // The idea of using a single shorter candidate is by Cassio Neri.
   // It is less or equal to the upper bound by construction.
   uint64_t shorter = 10 * ((upper >> 2) / 10);
-  if ((shorter << 2) >= lower) return write(buffer, shorter, dec_exp);
+  if ((shorter << 2) >= lower) {
+    write(buffer, shorter, dec_exp);
+    return;
+  }
 
   uint64_t scaled_sig = umul192_upper64_inexact_to_odd(
       pow10.hi, pow10.lo, bin_sig_shifted << shift);
