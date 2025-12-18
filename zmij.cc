@@ -855,6 +855,7 @@ void dtoa(double value, char* buffer) noexcept {
 
   constexpr int num_exp_bits = num_bits - num_sig_bits - 1;
   constexpr int exp_mask = (1 << num_exp_bits) - 1;
+  constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
   int bin_exp = int(bits >> num_sig_bits) & exp_mask;  // binary exponent
   if (((bin_exp + 1) & exp_mask) <= 1) [[unlikely]] {
     if (bin_exp != 0) {
@@ -871,7 +872,7 @@ void dtoa(double value, char* buffer) noexcept {
     regular = true;
   }
   bin_sig ^= implicit_bit;
-  bin_exp -= num_sig_bits + 1023;  // Remove the exponent bias.
+  bin_exp -= num_sig_bits + exp_bias;
 
   // Handle small integers.
   if ((bin_exp < 0) & (bin_exp >= -num_sig_bits)) {
