@@ -953,20 +953,23 @@ void dtoa(double value, char* buffer) noexcept {
     // Fixed-point remainder of the scaled significand modulo 10.
     uint64_t rem10 =
         (digit << num_fractional_bits) | (fractional >> num_integral_bits);
-    // dec_exp is chosen such that 10**dec_exp <= 2**bin_exp < 10**(dec_exp + 1)
-    // Since 1ulp = 2**bin_exp it will be in the range [1, 10) after scaling by
+    // dec_exp is chosen so that 10**dec_exp <= 2**bin_exp < 10**(dec_exp + 1).
+    // Since 1ulp == 2**bin_exp it will be in the range [1, 10) after scaling by
     // 10**dec_exp. Add 1 to combine the shift with division by two.
-    uint64_t half_ulp = pow10_hi >> (num_integral_bits - exp_shift + 1);
-    uint64_t upper = rem10 + half_ulp;
+    uint64_t half_ulp10 = pow10_hi >> (num_integral_bits - exp_shift + 1);
+    uint64_t upper = rem10 + half_ulp10;
 
     // An optimization from yy by Yaoyuan Guo:
-    if (fractional != (uint64_t(1) << 63) && rem10 != half_ulp &&
-        ten - upper > uint64_t(1)) [[likely]] {
+    if (
+        // Exact half-ulp tie when rounding to nearest integer.
+        fractional != (uint64_t(1) << 63) &&
+        // Exact half-ulp tie when rounding to nearest 10.
+        rem10 != half_ulp10 && ten - upper > uint64_t(1)) [[likely]] {
       bool round = (upper >> num_fractional_bits) >= 10;
       uint64_t shorter = integral - digit + round * 10;
       uint64_t longer = integral + (fractional >= (uint64_t(1) << 63));
       return write(buffer,
-                   ((half_ulp >= rem10) + round != 0) ? shorter : longer,
+                   ((half_ulp10 >= rem10) + round != 0) ? shorter : longer,
                    dec_exp);
     }
   }
