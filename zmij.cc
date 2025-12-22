@@ -741,7 +741,7 @@ inline auto is_big_endian() noexcept -> bool {
   return bytes[0] == 0;
 }
 
-inline auto count_lzero(uint64_t x) noexcept -> int {
+inline auto countl_zero(uint64_t x) noexcept -> int {
 #if defined(_MSC_VER) && defined(__AVX2__)
   // use lzcnt on MSVC only on AVX2 capable CPU's that all have this BMI
   // instruction
@@ -769,17 +769,17 @@ inline auto count_trailing_nonzeros(uint64_t x) noexcept -> int {
   // We count the number of characters until there are only '0' == 0x30
   // characters left.
   // The code is equivalent to
-  //   return 8 - count_lzero(x & ~0x30303030'30303030) / 8
+  //   return 8 - countl_zero(x & ~0x30303030'30303030) / 8
   // but if the BSR instruction is emitted, subtracting the constant
   // before dividing allows combining it with the subtraction from BSR
   // counting in the opposite direction.
-  //   return size_t(71 - count_lzero(x & ~0x30303030'30303030)) / 8;
+  //   return size_t(71 - countl_zero(x & ~0x30303030'30303030)) / 8;
   // Additionally, the bsr instruction requires a zero check.  Since the
   // high bit is never set we can avoid the zero check by shifting the
   // datum left by one and using XOR to both remove the 0x30s and insert
   // a sentinel bit at the end.
   constexpr uint64_t mask_with_sentinel = (0x30303030'30303030ull << 1) | 1;
-  return (70u - count_lzero((x << 1) ^ mask_with_sentinel)) / 8;
+  return (70u - countl_zero((x << 1) ^ mask_with_sentinel)) / 8;
 }
 
 // Converts value in the range [0, 100) to a string. GCC generates a bit better
@@ -976,6 +976,7 @@ void dtoa(double value, char* buffer) noexcept {
   constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
   int bin_exp = int(bits >> num_sig_bits) & exp_mask;  // binary exponent
 
+  bool subnormal = false;
   if (((bin_exp + 1) & exp_mask) <= 1) [[unlikely]] {
     if (bin_exp != 0) {
       memcpy(buffer, bin_sig == 0 ? "inf" : "nan", 4);
@@ -989,22 +990,32 @@ void dtoa(double value, char* buffer) noexcept {
     bin_sig |= implicit_bit;
     bin_exp = 1;
     regular = true;
+    subnormal = true;
   }
   bin_sig ^= implicit_bit;
   bin_exp -= num_sig_bits + exp_bias;
 
   auto [dec_sig, dec_exp] = to_decimal(bin_sig, bin_exp, regular);
-  dec_exp += 15 + (dec_sig >= uint64_t(1e16));
+  int num_digits = 15 + (dec_sig >= uint64_t(1e16));
+  dec_exp += num_digits;
 
   char* start = buffer;
   buffer = write_significand(buffer + 1, dec_sig);
+  if (subnormal) [[unlikely]] {
+    char* p = start + 1;
+    while (*p == '0') ++p;
+    int num_zeros = p - (start + 1);
+    memcpy(start + 1, p, num_digits - num_zeros);
+    dec_exp -= num_zeros;
+    buffer -= num_zeros;
+  }
   start[0] = start[1];
   start[1] = '.';
 
   *buffer++ = 'e';
   *buffer++ = '+' + (dec_exp < 0) * ('-' - '+');
   int mask = dec_exp >> 31;
-  dec_exp = ((dec_exp + mask) ^ mask); // absolute value
+  dec_exp = ((dec_exp + mask) ^ mask);  // absolute value
   auto [a, bb] = divmod100(uint32_t(dec_exp));
   *buffer = char('0' + a);
   buffer += dec_exp >= 100;

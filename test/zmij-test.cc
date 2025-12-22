@@ -1,4 +1,4 @@
-#include "zmij.cc"
+#include "../zmij.cc"
 
 #include <gtest/gtest.h>
 
@@ -14,8 +14,8 @@ auto dtoa(double value) -> std::string {
 }
 
 TEST(zmij_test, utilities) {
-  EXPECT_EQ(count_lzero(1), 63);
-  EXPECT_EQ(count_lzero(~0ull), 0);
+  EXPECT_EQ(countl_zero(1), 63);
+  EXPECT_EQ(countl_zero(~0ull), 0);
 
   EXPECT_EQ(count_trailing_nonzeros(0x30303030'30303030ull), 0);
   EXPECT_EQ(count_trailing_nonzeros(0x30303030'30303031ull), 1);
@@ -36,6 +36,13 @@ TEST(zmij_test, umul192_upper64_inexact_to_odd) {
 }
 
 TEST(zmij_test, normal) { EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34"); }
+
+TEST(zmij_test, subnormal) {
+  EXPECT_EQ(dtoa(1e-323), "1.e-323");
+  EXPECT_EQ(dtoa(1.2e-322), "1.2e-322");
+  EXPECT_EQ(dtoa(1.24e-322), "1.24e-322");
+  EXPECT_EQ(dtoa(1.234e-320), "1.234e-320");
+}
 
 TEST(zmij_test, small_int) { EXPECT_EQ(dtoa(1), "1e+00"); }
 
