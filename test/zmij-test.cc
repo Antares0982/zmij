@@ -38,7 +38,7 @@ TEST(zmij_test, umul192_upper64_inexact_to_odd) {
 TEST(zmij_test, normal) { EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34"); }
 
 TEST(zmij_test, subnormal) {
-  EXPECT_EQ(dtoa(1e-323), "1.e-323");
+  EXPECT_EQ(dtoa(1e-323), "1e-323");
   EXPECT_EQ(dtoa(1.2e-322), "1.2e-322");
   EXPECT_EQ(dtoa(1.5e-323), "1.5e-323");
   EXPECT_EQ(dtoa(1.24e-322), "1.24e-322");

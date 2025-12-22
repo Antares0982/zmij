@@ -1012,6 +1012,7 @@ template <typename Float> void to_string(Float value, char* buffer) noexcept {
     memcpy(start + 1, p, num_digits - num_zeros + 1);
     dec_exp -= num_zeros;
     buffer -= num_zeros;
+    buffer -= buffer == start + 2;
   }
   start[0] = start[1];
   start[1] = '.';
