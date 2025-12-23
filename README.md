@@ -24,7 +24,7 @@ with implementations in C and C++
 
 int main() {
   char buf[zmij::buffer_size];
-  zmij::dtoa(6.62607015e-34, buf);
+  zmij::to_string(6.62607015e-34, buf);
   puts(buf);
 }
 ```
