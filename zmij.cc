@@ -780,10 +780,7 @@ inline auto bswap64(uint64_t x) noexcept -> uint64_t {
 }
 
 inline auto count_trailing_nonzeros(uint64_t x) noexcept -> int {
-  // This assumes little-endian, that is the first char of the string
-  // is in the lowest byte and the last char is in the highest byte.
-  assert(!is_big_endian());
-  // We count the number of bytes until there are only '\0's left.
+  // We count the number of bytes until there are only zeros left.
   // The code is equivalent to
   //   return 8 - count_lzero(x) / 8
   // but if the BSR instruction is emitted (as gcc on x64 does with
@@ -792,9 +789,10 @@ inline auto count_trailing_nonzeros(uint64_t x) noexcept -> int {
   // due to BSR counting in the opposite direction.
   //
   // Additionally, the BSR instruction requires a zero check.  Since the
-  // high bit is never set we can avoid the zero check by shifting the
-  // datum left by one and inserting a sentinel bit at the end. On my x64
-  // this is a measurable speed-up over the automatically inserted range check.
+  // high bit is unused we can avoid the zero check by shifting the
+  // datum left by one and inserting a sentinel bit at the end. This can
+  // be faster than the automatically inserted range check.
+  if (is_big_endian()) x = bswap64(x);
   return (70 - countl_zero((x << 1) | 1)) / 8;
 }
 
