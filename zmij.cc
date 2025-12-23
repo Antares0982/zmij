@@ -773,15 +773,10 @@ inline auto bswap64(uint64_t x) noexcept -> uint64_t {
 #elif defined(_MSC_VER)
   return _byteswap_uint64(x);
 #else
-  return 
-    ((x & 0xff00000000000000) >> 56) |
-    ((x & 0x00ff000000000000) >> 40) |
-    ((x & 0x0000ff0000000000) >> 24) |
-    ((x & 0x000000ff00000000) >> 8) |
-    ((x & 0x00000000ff000000) << 8) |
-    ((x & 0x0000000000ff0000) << 24) |
-    ((x & 0x000000000000ff00) << 40) |
-    ((x & 0x00000000000000ff) << 56);
+  return ((x & 0xff00000000000000) >> 56) | ((x & 0x00ff000000000000) >> 40) |
+         ((x & 0x0000ff0000000000) >> 24) | ((x & 0x000000ff00000000) >> 8) |
+         ((x & 0x00000000ff000000) << 8) | ((x & 0x0000000000ff0000) << 24) |
+         ((x & 0x000000000000ff00) << 40) | ((x & 0x00000000000000ff) << 56);
 #endif
 }
 
@@ -835,6 +830,8 @@ auto to_bcd8(uint64_t abcdefgh) noexcept -> uint64_t {
   return is_big_endian() ? a_b_c_d_e_f_g_h : bswap64(a_b_c_d_e_f_g_h);
 }
 
+inline void write8(char* buffer, uint64_t value) { memcpy(buffer, &value, 8); }
+
 // Writes a significand consisting of up to 17 decimal digits (16-17 for
 // normals) and removes trailing zeros.
 auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
@@ -851,16 +848,14 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 
   constexpr uint64_t zerobits = 0x30303030'30303030u;  // 0x30 == '0'
   uint64_t bcd = to_bcd8(bbccddee);
-  uint64_t bits = bcd | zerobits;
-  memcpy(buffer, &bits, 8);
+  write8(buffer, bcd | zerobits);
   if (ffgghhii == 0) {
     buffer += count_trailing_nonzeros(bcd);
     return buffer - int(buffer - start == 1);
   }
   buffer += 8;
   bcd = to_bcd8(ffgghhii);
-  bits = bcd | zerobits;
-  memcpy(buffer, &bits, 8);
+  write8(buffer, bcd | zerobits);
   return buffer + count_trailing_nonzeros(bcd);
 #else   // __ARM_NEON__
   // An optimized version for NEON by Dougall Johnson.
@@ -937,18 +932,14 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 // Writes a significand consisting of up to 9 decimal digits (8-9 for normals)
 // and removes trailing zeros.
 auto write_significand9(char* buffer, uint32_t value) noexcept -> char* {
-  // Each digit is denoted by a letter so value is abbccddee.
-  uint32_t a = value / 100'000'000;
-  uint32_t bbccddee = value % 100'000'000;
-
   char* start = buffer;
+  uint32_t a = value / 100'000'000;
   *buffer = char('0' + a);
   buffer += a != 0;
 
   constexpr uint64_t zerobits = 0x30303030'30303030u;  // 0x30 == '0'
-  uint64_t bcd = to_bcd8(bbccddee);
-  uint64_t bits = bcd | zerobits;
-  memcpy(buffer, &bits, 8);
+  uint64_t bcd = to_bcd8(value % 100'000'000);
+  write8(buffer, bcd | zerobits);
   buffer += count_trailing_nonzeros(bcd);
   return buffer - int(buffer - start == 1);
 }
