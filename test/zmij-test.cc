@@ -9,13 +9,13 @@
 
 auto dtoa(double value) -> std::string {
   char buffer[zmij::buffer_size];
-  zmij::dtoa(value, buffer);
+  zmij::to_string(value, buffer);
   return buffer;
 }
 
 auto ftoa(float value) -> std::string {
   char buffer[zmij::buffer_size];
-  zmij::detail::to_string<float>(value, buffer);
+  zmij::to_string(value, buffer);
   return buffer;
 }
 
