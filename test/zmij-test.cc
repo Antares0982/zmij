@@ -44,6 +44,7 @@ TEST(zmij_test, umul192_upper64_inexact_to_odd) {
 TEST(dtoa_test, normal) { EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34"); }
 
 TEST(dtoa_test, subnormal) {
+  EXPECT_EQ(dtoa(std::numeric_limits<double>::denorm_min()), "5e-324");
   EXPECT_EQ(dtoa(1e-323), "1e-323");
   EXPECT_EQ(dtoa(1.2e-322), "1.2e-322");
   EXPECT_EQ(dtoa(1.5e-323), "1.5e-323");
@@ -96,6 +97,10 @@ TEST(dtoa_test, all_exponents) {
 
 TEST(ftoa_test, normal) {
   EXPECT_EQ(ftoa(6.62607e-34f), "6.62607e-34");
+}
+
+TEST(ftoa_test, subnormal) {
+  EXPECT_EQ(ftoa(std::numeric_limits<float>::denorm_min()), "0.0000001e-38");
 }
 
 auto main(int argc, char** argv) -> int {
