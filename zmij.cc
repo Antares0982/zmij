@@ -830,33 +830,33 @@ auto to_bcd8(uint64_t abcdefgh) noexcept -> uint64_t {
   return is_big_endian() ? a_b_c_d_e_f_g_h : bswap64(a_b_c_d_e_f_g_h);
 }
 
+inline char* write_if_nonzero(char* buffer, uint32_t digit) {
+  *buffer = char('0' + digit);
+  return buffer + (digit != 0);
+}
+
 inline void write8(char* buffer, uint64_t value) { memcpy(buffer, &value, 8); }
+
+constexpr uint64_t zeros = 0x30303030'30303030u;  // 0x30 == '0'
 
 // Writes a significand consisting of up to 17 decimal digits (16-17 for
 // normals) and removes trailing zeros.
 auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 #ifndef __ARM_NEON
+  char* start = buffer;
   // Each digit is denoted by a letter so value is abbccddeeffgghhii.
   uint32_t abbccddee = uint32_t(value / 100'000'000);
   uint32_t ffgghhii = uint32_t(value % 100'000'000);
-  uint32_t a = abbccddee / 100'000'000;
-  uint32_t bbccddee = abbccddee % 100'000'000;
-
-  char* start = buffer;
-  *buffer = char('0' + a);
-  buffer += a != 0;
-
-  constexpr uint64_t zerobits = 0x30303030'30303030u;  // 0x30 == '0'
-  uint64_t bcd = to_bcd8(bbccddee);
-  write8(buffer, bcd | zerobits);
+  buffer = write_if_nonzero(buffer, abbccddee / 100'000'000);
+  uint64_t bcd = to_bcd8(abbccddee % 100'000'000);
+  write8(buffer, bcd | zeros);
   if (ffgghhii == 0) {
     buffer += count_trailing_nonzeros(bcd);
     return buffer - int(buffer - start == 1);
   }
-  buffer += 8;
   bcd = to_bcd8(ffgghhii);
-  write8(buffer, bcd | zerobits);
-  return buffer + count_trailing_nonzeros(bcd);
+  write8(buffer + 8, bcd | zeros);
+  return buffer + 8 + count_trailing_nonzeros(bcd);
 #else   // __ARM_NEON
   // An optimized version for NEON by Dougall Johnson.
   struct to_string_constants {
@@ -933,13 +933,9 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 // and removes trailing zeros.
 auto write_significand9(char* buffer, uint32_t value) noexcept -> char* {
   char* start = buffer;
-  uint32_t a = value / 100'000'000;
-  *buffer = char('0' + a);
-  buffer += a != 0;
-
-  constexpr uint64_t zerobits = 0x30303030'30303030u;  // 0x30 == '0'
+  buffer = write_if_nonzero(buffer, value / 100'000'000);
   uint64_t bcd = to_bcd8(value % 100'000'000);
-  write8(buffer, bcd | zerobits);
+  write8(buffer, bcd | zeros);
   buffer += count_trailing_nonzeros(bcd);
   return buffer - int(buffer - start == 1);
 }
