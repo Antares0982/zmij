@@ -829,7 +829,7 @@ auto to_bcd8(uint64_t abcdefgh) noexcept -> uint64_t {
 // normals) and removes trailing zeros.
 auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 #ifndef __ARM_NEON__
-  // Each digits is denoted by a letter so value is abbccddeeffgghhii.
+  // Each digit is denoted by a letter so value is abbccddeeffgghhii.
   uint32_t abbccddee = uint32_t(value / 100'000'000);
   uint32_t ffgghhii = uint32_t(value % 100'000'000);
   uint32_t a = abbccddee / 100'000'000;
@@ -924,10 +924,10 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 #endif  // __ARM_NEON__
 }
 
-// Writes a significand consisting of up to 9 decimal digits (8-9 for
-// normals) and removes trailing zeros.
+// Writes a significand consisting of up to 9 decimal digits (8-9 for normals)
+// and removes trailing zeros.
 auto write_significand9(char* buffer, uint32_t value) noexcept -> char* {
-  // Each digits is denoted by a letter so value is abbccddee.
+  // Each digit is denoted by a letter so value is abbccddee.
   uint32_t a = value / 100'000'000;
   uint32_t bbccddee = value % 100'000'000;
 
