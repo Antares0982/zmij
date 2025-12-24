@@ -11,14 +11,14 @@
 #include "zmij.h"
 
 int main() {
-  char actual[zmij::float_buffer_size] = {};
+  char actual[zmij::double_buffer_size] = {};
   char expected[32] = {};
-  unsigned long long i = 0, n = ~uint32_t();
-  double percent = 100.0 / n;
-  for (; i <= n; ++i) {
+  uint32_t i = 0;
+  double percent = 100.0 / (1LL << 32);
+  do {
     if (i % 50'000'000 == 0) printf("Progress: %.2f%%\n", i * percent);
 
-    uint32_t bits = i;
+    uint32_t bits = i++;
     float f = 0;
     memcpy(&f, &bits, sizeof(float));
 
@@ -28,13 +28,9 @@ int main() {
     if (strcmp(actual, expected) == 0) continue;
     if (strcmp(actual, "0") == 0 && strcmp(expected, "0e0") == 0) continue;
     if (strcmp(actual, "-0") == 0 && strcmp(expected, "-0e0") == 0) continue;
-    if (strcmp(actual, "nan") == 0 && strncmp(expected, "nan", 3) == 0)
-      continue;
-    if (strcmp(actual, "-nan") == 0 && strncmp(expected, "-nan", 4) == 0)
-      continue;
 
     printf("Output mismatch: %s != %s\n", actual, expected);
     return 1;
-  }
-  printf("Tested %lld values\n", i);
+  } while (i != 0);
+  printf("Tested %u values\n", unsigned(i));
 }
