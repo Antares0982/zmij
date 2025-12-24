@@ -931,7 +931,7 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 #endif  // __ARM_NEON__
 }
 
-// Writes a significand consisting of up to 9 decimal digits (8-9 for normals)
+// Writes a significand consisting of up to 9 decimal digits (7-9 for normals)
 // and removes trailing zeros.
 auto write_significand9(char* buffer, uint32_t value) noexcept -> char* {
   char* start = buffer;
