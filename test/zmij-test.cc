@@ -8,13 +8,13 @@
 #include <string>
 
 auto dtoa(double value) -> std::string {
-  char buffer[zmij::buffer_size];
+  char buffer[zmij::double_buffer_size] = {};
   zmij::to_string(value, buffer);
   return buffer;
 }
 
 auto ftoa(float value) -> std::string {
-  char buffer[zmij::buffer_size];
+  char buffer[zmij::float_buffer_size] = {};
   zmij::to_string(value, buffer);
   return buffer;
 }

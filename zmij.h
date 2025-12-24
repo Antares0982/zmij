@@ -11,13 +11,21 @@ namespace detail {
 template <typename Float> void to_string(Float value, char* buffer) noexcept;
 }  // namespace detail
 
-constexpr int buffer_size = 25;
+enum {
+  double_buffer_size = 25,
+  float_buffer_size = 17,
+};
 
 /// Writes the shortest correctly rounded decimal representation of `value` to
-/// `buffer`. `buffer` should point to a buffer of size `buffer_size` or larger.
+/// `buffer`. `buffer` should point to a buffer of size `double_buffer_size` or
+/// larger.
 inline void to_string(double value, char* buffer) noexcept {
   return detail::to_string(value, buffer);
 }
+
+/// Writes the shortest correctly rounded decimal representation of `value` to
+/// `buffer`. `buffer` should point to a buffer of size `float_buffer_size` or
+/// larger.
 inline void to_string(float value, char* buffer) noexcept {
   return detail::to_string(value, buffer);
 }

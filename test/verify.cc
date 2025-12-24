@@ -12,8 +12,8 @@
 #include "zmij.h"
 
 int main() {
-  char actual[25] = {};
-  char expected[25] = {};
+  char actual[zmij::float_buffer_size] = {};
+  char expected[32] = {};
   unsigned long long i = 0, n = ~uint32_t();
   double percent = 100.0 / n;
   for (; i <= n; ++i) {
@@ -24,7 +24,7 @@ int main() {
     memcpy(&f, &bits, sizeof(float));
 
     zmij::to_string(f, actual);
-    *std::to_chars(expected, expected + 25, f, std::chars_format::scientific)
+    *std::to_chars(expected, expected + 32, f, std::chars_format::scientific)
          .ptr = '\0';
 
     if (strcmp(actual, expected) == 0) continue;
