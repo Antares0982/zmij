@@ -14,9 +14,10 @@
 
 int main() {
   unsigned concurrency = std::thread::hardware_concurrency();
-  constexpr unsigned long long N = std::numeric_limits<uint32_t>::max() + 1ULL;
-  uint32_t n = static_cast<uint32_t>(N / concurrency);
-  if (static_cast<uint64_t>(n) * concurrency != N) {
+  constexpr unsigned long long num_floats =
+      std::numeric_limits<uint32_t>::max() + 1ULL;
+  uint32_t n = static_cast<uint32_t>(num_floats / concurrency);
+  if (static_cast<uint64_t>(n) * concurrency != num_floats) {
     printf("Unsupported concurrency\n");
     return 1;
   }
@@ -52,5 +53,5 @@ int main() {
   }
 
   for (int i = 0; i < concurrency; ++i) threads[i].join();
-  printf("Tested %llu values\n", N);
+  printf("Tested %llu values\n", num_floats);
 }
