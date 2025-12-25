@@ -11,7 +11,6 @@ target_compile_definitions(zmij-no-int128-test PRIVATE ZMIJ_USE_INT128=0)
 target_link_libraries(zmij-no-int128-test gtest)
 add_test(NAME zmij-no-int128-test COMMAND zmij-no-int128-test)
 
-add_executable(verify verify.cc)
+add_executable(verify verify.cc dragonbox/dragonbox_to_chars.cpp)
 target_include_directories(verify PRIVATE .)
-target_compile_features(verify PRIVATE cxx_std_20)
 target_link_libraries(verify zmij)
