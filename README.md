@@ -72,6 +72,7 @@ taking the best of 3 runs.
 * C++: https://github.com/vitaut/zmij/blob/main/zmij.cc (reference implementation)
 * C: https://github.com/vitaut/zmij/blob/main/zmij.c
 * Rust: https://github.com/dtolnay/zmij
+* Zig: https://github.com/de-sh/zmij
 
 ## Differences from Schubfach
 
