@@ -1059,21 +1059,22 @@ auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
 
   // The idea of using a single shorter candidate is by Cassio Neri.
   // It is less or equal to the upper bound by construction.
-  uint64_t shorter = 10 * ((upper >> bound_shift) / 10);
+  UInt shorter = 10 * ((upper >> bound_shift) / 10);
   if ((shorter << bound_shift) >= lower)
     return normalize<num_bits>({shorter, dec_exp}, subnormal);
 
-  uint64_t scaled_sig = umul_upper_inexact_to_odd(pow10_hi, pow10_lo,
-                                                  bin_sig_shifted << exp_shift);
-  uint64_t dec_sig_below = scaled_sig >> bound_shift;
-  uint64_t dec_sig_above = dec_sig_below + 1;
+  UInt scaled_sig = umul_upper_inexact_to_odd(pow10_hi, pow10_lo,
+                                              bin_sig_shifted << exp_shift);
+  UInt dec_sig_below = scaled_sig >> bound_shift;
+  UInt dec_sig_above = dec_sig_below + 1;
 
   // Pick the closest of dec_sig_below and dec_sig_above and check if it's in
   // the rounding interval.
-  int64_t cmp = int64_t(scaled_sig - ((dec_sig_below + dec_sig_above) << 1));
+  using sint = std::make_signed_t<UInt>;
+  sint cmp = sint(scaled_sig - ((dec_sig_below + dec_sig_above) << 1));
   bool below_closer = cmp < 0 || (cmp == 0 && (dec_sig_below & 1) == 0);
   bool below_in = (dec_sig_below << bound_shift) >= lower;
-  uint64_t dec_sig = (below_closer & below_in) ? dec_sig_below : dec_sig_above;
+  UInt dec_sig = (below_closer & below_in) ? dec_sig_below : dec_sig_above;
   return normalize<num_bits>({dec_sig, dec_exp}, subnormal);
 }
 
