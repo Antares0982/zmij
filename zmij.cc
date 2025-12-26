@@ -1148,6 +1148,9 @@ auto write(Float value, char* buffer) noexcept -> size_t {
       return 1;
     }
     // Handle subnormals.
+    // Setting regular is not redundant: it avoids extra data dependencies
+    // and register pressure on the hot path (measurable perf impact).
+    regular = true;
     bin_sig |= implicit_bit;
     bin_exp = 1;
     subnormal = true;
