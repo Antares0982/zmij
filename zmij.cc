@@ -1116,14 +1116,14 @@ auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
 namespace zmij::detail {
 
 template <typename Float>
-auto write(Float value, char* buffer) noexcept -> size_t {
+auto write(Float value, char* buffer) noexcept -> char* {
+  // It is slightly faster to return a pointer to the end than the size.
   static_assert(std::numeric_limits<Float>::is_iec559, "IEEE 754 required");
   constexpr int num_bits = std::numeric_limits<Float>::digits == 53 ? 64 : 32;
   using uint = std::conditional_t<num_bits == 64, uint64_t, uint32_t>;
   uint bits = 0;
   memcpy(&bits, &value, sizeof(value));
 
-  char* buffer_start = buffer;
   *buffer = '-';
   buffer += bits >> (num_bits - 1);
 
@@ -1141,11 +1141,11 @@ auto write(Float value, char* buffer) noexcept -> size_t {
   if (((bin_exp + 1) & exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) {
       memcpy(buffer, bin_sig == 0 ? "inf" : "nan", 4);
-      return 3;
+      return buffer + 3;
     }
     if (bin_sig == 0) {
       memcpy(buffer, "0", 2);
-      return 1;
+      return buffer + 1;
     }
     // Handle subnormals.
     // Setting regular is not redundant: it avoids extra data dependencies
@@ -1159,7 +1159,7 @@ auto write(Float value, char* buffer) noexcept -> size_t {
   bin_exp -= num_sig_bits + exp_bias;
 
   auto [dec_sig, dec_exp] = to_decimal(bin_sig, bin_exp, regular, subnormal);
-  char* digits_start = buffer;
+  char* start = buffer;
   int num_digits = std::numeric_limits<Float>::max_digits10 - 2;
   if (num_bits == 64) {
     dec_exp += num_digits + (dec_sig >= uint(1e16));
@@ -1172,8 +1172,8 @@ auto write(Float value, char* buffer) noexcept -> size_t {
     dec_exp += num_digits + (dec_sig >= uint(1e8));
     buffer = write_significand9(buffer + 1, dec_sig);
   }
-  digits_start[0] = digits_start[1];
-  digits_start[1] = '.';
+  start[0] = start[1];
+  start[1] = '.';
 
   *buffer++ = 'e';
   *buffer++ = '-' + (dec_exp >= 0) * ('+' - '-');
@@ -1185,10 +1185,10 @@ auto write(Float value, char* buffer) noexcept -> size_t {
   memcpy(buffer, digits2(bb), 2);
   buffer += 2;
   *buffer = '\0';
-  return buffer - buffer_start;
+  return buffer;
 }
 
-template auto write(double value, char* buffer) noexcept -> size_t;
-template auto write(float value, char* buffer) noexcept -> size_t;
+template auto write(double value, char* buffer) noexcept -> char*;
+template auto write(float value, char* buffer) noexcept -> char*;
 
 }  // namespace zmij::detail
