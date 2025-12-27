@@ -43,6 +43,8 @@ TEST(zmij_test, umul_upper_inexact_to_odd) {
 
 TEST(dtoa_test, normal) {
   EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34");
+
+  // Exact half-ulp tie when rounding to nearest integer.
   EXPECT_EQ(dtoa(5.444310685350916e+14), "5.444310685350916e+14");
 }
 
