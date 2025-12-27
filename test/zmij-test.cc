@@ -1,11 +1,11 @@
 #include "../zmij.cc"
 
 #include <gtest/gtest.h>
-#include <math.h>
-#include <stdio.h>
 
-#include <limits>
-#include <string>
+#include <limits>  // std::numeric_limits
+#include <string>  // std::string
+
+#include "dragonbox/dragonbox_to_chars.h"
 
 auto dtoa(double value) -> std::string {
   char buffer[zmij::double_buffer_size] = {};
@@ -117,12 +117,15 @@ TEST(dtoa_test, single_candidate) {
 }
 
 TEST(dtoa_test, all_exponents) {
-  using limits = std::numeric_limits<double>;
-  for (int exp = limits::min_exponent; exp < limits::max_exponent; ++exp) {
-    double expected = ldexp(1, exp);
-    double actual = 0;
-    sscanf(dtoa(expected).c_str(), "%lg", &actual);
-    EXPECT_EQ(actual, expected);
+  for (uint64_t exp = 0; exp <= 0x3ff; ++exp) {
+    uint64_t bits = (exp << 52) | 1;
+    double value = 0;
+    memcpy(&value, &bits, sizeof(double));
+
+    char expected[32] = {};
+    *jkj::dragonbox::to_chars(value, expected) = '\0';
+
+    EXPECT_EQ(dtoa(value), expected);
   }
 }
 

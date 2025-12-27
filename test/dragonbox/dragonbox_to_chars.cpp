@@ -496,8 +496,8 @@ namespace JKJ_NAMESPACE {
                     exponent = -exponent;
                 }
                 else {
-                    buffer[0] = 'e';
-                    buffer += 1;
+                    stdr::memcpy(buffer, "e+", 2);
+                    buffer += 2;
                 }
 
                 if (exponent >= 100) {
@@ -509,13 +509,9 @@ namespace JKJ_NAMESPACE {
                     print_1_digit(int(d2), buffer + 2);
                     buffer += 3;
                 }
-                else if (exponent >= 10) {
+                else {
                     print_2_digits(exponent, buffer);
                     buffer += 2;
-                }
-                else {
-                    print_1_digit(exponent, buffer);
-                    buffer += 1;
                 }
 
                 return buffer;
