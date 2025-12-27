@@ -41,7 +41,10 @@ TEST(zmij_test, umul_upper_inexact_to_odd) {
             0x24554a3ce60a4643);
 }
 
-TEST(dtoa_test, normal) { EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34"); }
+TEST(dtoa_test, normal) {
+  EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34");
+  EXPECT_EQ(dtoa(5.444310685350916e+14), "5.444310685350916e+14");
+}
 
 TEST(dtoa_test, subnormal) {
   EXPECT_EQ(dtoa(std::numeric_limits<double>::denorm_min()), "5e-324");
