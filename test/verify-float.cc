@@ -16,13 +16,13 @@
 #include "zmij.h"
 
 int main() {
-  unsigned num_threads = std::thread::hardware_concurrency();
   constexpr unsigned long long num_floats = 1ULL << 32;
-  printf("Using %u threads\n", num_threads);
 
+  unsigned num_threads = std::thread::hardware_concurrency();
   std::vector<std::thread> threads(num_threads);
   std::atomic<uint32_t> num_processed_floats(0);
   std::atomic<uint32_t> num_errors(0);
+  printf("Using %u threads\n", num_threads);
 
   auto start = std::chrono::steady_clock::now();
   for (uint32_t i = 0; i < num_threads; ++i) {

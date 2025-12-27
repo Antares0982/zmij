@@ -98,6 +98,7 @@ int main() {
   unsigned num_threads = std::thread::hardware_concurrency();
   std::vector<std::thread> threads(num_threads);
   std::atomic<uint64_t> num_processed_doubles(0);
+  printf("Using %u threads\n", num_threads);
 
   auto start = std::chrono::steady_clock::now();
   for (unsigned i = 0; i < num_threads; ++i) {
