@@ -22,18 +22,6 @@ auto ftoa(float value) -> std::string {
   return {buffer, n};
 }
 
-auto dtoa_imply_len(double value) -> std::string {
-  char buffer[zmij::double_buffer_size] = {};
-  zmij::write(buffer, sizeof(buffer), value);
-  return buffer;
-}
-
-auto ftoa_imply_len(float value) -> std::string {
-  char buffer[zmij::float_buffer_size] = {};
-  zmij::write(buffer, sizeof(buffer), value);
-  return buffer;
-}
-
 auto dtoa_no_buffer(double value) -> std::string {
   auto n = zmij::write(nullptr, 0, value);
   std::string result(n, '\0');
@@ -125,7 +113,6 @@ TEST(dtoa_test, inf) {
 }
 
 TEST(dtoa_test, nan) {
-  EXPECT_EQ(dtoa_imply_len(std::numeric_limits<double>::quiet_NaN()), "nan");
   EXPECT_EQ(dtoa(-std::numeric_limits<double>::quiet_NaN()), "-nan");
 }
 
@@ -145,9 +132,16 @@ TEST(dtoa_test, single_candidate) {
   EXPECT_EQ(dtoa(6.079537928711555e+61), "6.079537928711555e+61");
 }
 
+TEST(dtoa_test, null_terminated) {
+  char buffer[zmij::double_buffer_size] = {};
+  zmij::write(buffer, sizeof(buffer), 9.061488e+15);
+  EXPECT_STREQ(buffer, "9.061488e+15");
+  zmij::write(buffer, sizeof(buffer), std::numeric_limits<double>::quiet_NaN());
+  EXPECT_STREQ(buffer, "nan");
+}
+
 TEST(ftoa_test, normal) {
   EXPECT_EQ(ftoa_no_buffer(6.62607e-34f), "6.62607e-34");
-  EXPECT_EQ(ftoa_imply_len(9.061488e15f), "9.061488e+15");
   EXPECT_EQ(ftoa(1.342178e+08f), "1.342178e+08");
   EXPECT_EQ(ftoa(1.3421781e+08f), "1.3421781e+08");
 }
