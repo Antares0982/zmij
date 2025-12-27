@@ -1,3 +1,6 @@
+// Include zmij.cc instead of linking with the library to test multiple
+// configurations without building multiple versions of the library and to test
+// internal functions.
 #include "../zmij.cc"
 
 #include <gtest/gtest.h>
