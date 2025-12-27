@@ -9,7 +9,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <limits>
 #include <thread>
 #include <vector>
 
@@ -18,17 +17,12 @@
 
 int main() {
   unsigned num_threads = std::thread::hardware_concurrency();
-  constexpr unsigned long long num_floats =
-      std::numeric_limits<uint32_t>::max() + 1ULL;
-  if (num_threads == 0 || num_threads > std::numeric_limits<uint32_t>::max()) {
-    printf("Unsupported concurrency\n");
-    return 1;
-  }
+  constexpr unsigned long long num_floats = 1ULL << 32;
   printf("Using %u threads\n", num_threads);
 
+  std::vector<std::thread> threads(num_threads);
   std::atomic<uint32_t> num_processed_floats(0);
   std::atomic<uint32_t> num_errors(0);
-  std::vector<std::thread> threads(num_threads);
 
   auto start = std::chrono::steady_clock::now();
   for (uint32_t i = 0; i < num_threads; ++i) {
