@@ -18,3 +18,6 @@ target_compile_definitions(zmij-no-simd-test PRIVATE ZMIJ_USE_SIMD=0)
 add_executable(verify verify.cc dragonbox/dragonbox_to_chars.cpp)
 target_include_directories(verify PRIVATE .)
 target_link_libraries(verify zmij)
+
+add_executable(verify-double verify-double.cc)
+target_include_directories(verify-double PRIVATE .)
