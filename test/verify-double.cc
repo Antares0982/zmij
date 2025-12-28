@@ -44,21 +44,7 @@ constexpr auto debias(int bin_exp_biased) -> int {
   return bin_exp_biased - (num_sig_bits + exp_bias);
 }
 
-inline auto verify(uint64_t bits, int bin_exp, int dec_exp, int exp_shift,
-                   uint64_t pow10_lo) -> bool {
-  // The real power of 10 is in the range [pow10, pow10 + 1), where
-  // pow10 = ((pow10_hi << 64) | pow10_lo) * 2**(pow10_bin_exp - 127).
-
-  // Check for possible carry due to pow10 approximation error.
-  // This checks all cases where integral and fractional can be off.
-  // The rest is taken care of by the conservative boundary checks on the
-  // fast path.
-  uint64_t bin_sig = (bits & (implicit_bit - 1)) | implicit_bit;
-  uint64_t bin_sig_shifted = bin_sig << exp_shift;
-  uint64_t scaled_sig_lo = pow10_lo * bin_sig_shifted;
-  bool carry = scaled_sig_lo + bin_sig_shifted < scaled_sig_lo;
-  if (!carry) return true;
-
+inline auto verify(uint64_t bits, uint64_t bin_sig, int bin_exp) -> bool {
   fp actual = to_decimal(bin_sig, bin_exp, true, false);
 
   double value;
@@ -131,6 +117,7 @@ auto main() -> int {
   unsigned num_threads = std::thread::hardware_concurrency();
   std::vector<std::thread> threads(num_threads);
   std::atomic<unsigned long long> num_processed_doubles(0);
+  std::atomic<unsigned long long> num_special_cases(0);
   std::atomic<unsigned long long> num_errors(0);
   printf("Using %u threads\n", num_threads);
 
@@ -145,13 +132,14 @@ auto main() -> int {
     end |= bits;
     uint64_t n = end - begin;
     threads[i] = std::thread([i, begin, n, bin_exp, &num_processed_doubles,
-                              &num_errors] {
+                              &num_special_cases, &num_errors] {
       printf("Thread %d processing 0x%013llx - 0x%013llx\n", i, begin,
              begin + n - 1);
 
       constexpr double percent = 100.0 / num_significands;
       uint64_t last_processed_count = 0;
       auto last_update_time = std::chrono::steady_clock::now();
+      unsigned long long num_special_cases_local = 0;
       for (uint64_t j = 0; j < n; ++j) {
         uint64_t num_doubles = j - last_processed_count + 1;
         if (num_doubles >= (1 << 21) || j == n - 1) {
@@ -165,16 +153,33 @@ auto main() -> int {
             }
           }
         }
-        if (!verify(begin + j, bin_exp, dec_exp, exp_shift, pow10_lo))
+
+        // The real power of 10 is in the range [pow10, pow10 + 1), where
+        // pow10 = ((pow10_hi << 64) | pow10_lo) * 2**(pow10_bin_exp - 127).
+
+        // Check for possible carry due to pow10 approximation error.
+        // This checks all cases where integral and fractional can be off.
+        // The rest is taken care of by the conservative boundary checks on the
+        // fast path.
+        uint64_t bin_sig = ((begin + j) & (implicit_bit - 1)) | implicit_bit;
+        uint64_t bin_sig_shifted = bin_sig << exp_shift;
+        uint64_t scaled_sig_lo = pow10_lo * bin_sig_shifted;
+        bool carry = scaled_sig_lo + bin_sig_shifted < scaled_sig_lo;
+        if (!carry) continue;
+        ++num_special_cases_local;
+
+        if (!verify(begin + j, bin_sig, bin_exp))
           ++num_errors;
       }
+      num_special_cases += num_special_cases_local;
     });
   }
   for (int i = 0; i < num_threads; ++i) threads[i].join();
   auto finish = std::chrono::steady_clock::now();
 
   using seconds = std::chrono::duration<double>;
-  printf("%llu errors in %llu values in %.2f seconds\n", num_errors.load(),
+  printf("%llu errors and %llu special cases in %llu values in %.2f seconds\n",
+         num_errors.load(), num_special_cases.load(),
          num_processed_doubles.load(),
          std::chrono::duration_cast<seconds>(finish - start).count());
   return num_errors != 0 ? 1 : 0;
