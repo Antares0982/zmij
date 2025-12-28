@@ -1042,7 +1042,6 @@ auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
                 bool subnormal) noexcept -> fp {
   int dec_exp = compute_dec_exp(bin_exp, regular);
   int exp_shift = compute_exp_shift(bin_exp, dec_exp);
-  constexpr int dec_exp_min = -292;
   auto [pow10_hi, pow10_lo] = pow10_significands[-dec_exp - dec_exp_min];
 
   constexpr int num_bits = std::numeric_limits<UInt>::digits;
