@@ -51,6 +51,12 @@
 #  define ZMIJ_UNLIKELY
 #endif
 
+#if defined(__has_attribute) && __has_attribute(always_inline)
+#  define ZMIJ_INLINE __attribute__((always_inline))
+#else
+#  define ZMIJ_INLINE
+#endif
+
 namespace {
 
 struct uint128 {
@@ -993,39 +999,47 @@ template <int num_bits> auto normalize(fp dec, bool subnormal) noexcept -> fp {
   return dec;
 }
 
-// Converts a binary FP number bin_sig * 2**bin_exp to the shortest decimal
-// representation.
-template <typename UInt>
-auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
-                bool subnormal) noexcept -> fp {
-  // Compute the decimal exponent as floor(log10(2**bin_exp)) if regular or
-  // floor(log10(3/4 * 2**bin_exp)) otherwise, without branching.
+// Computes the decimal exponent as floor(log10(2**bin_exp)) if regular or
+// floor(log10(3/4 * 2**bin_exp)) otherwise, without branching.
+inline auto compute_dec_exp(int bin_exp, bool regular) noexcept -> int {
+  assert(bin_exp >= -1334 && bin_exp <= 2620);
   // log10_3_over_4_sig = round(log10(3/4) * 2**log10_2_exp)
   constexpr int log10_3_over_4_sig = -131'008;
   // log10_2_sig = round(log10(2) * 2**log10_2_exp)
   constexpr int log10_2_sig = 315'653;
   constexpr int log10_2_exp = 20;
-  assert(bin_exp >= -1334 && bin_exp <= 2620);
-  int dec_exp =
-      (bin_exp * log10_2_sig + !regular * log10_3_over_4_sig) >> log10_2_exp;
+  return (bin_exp * log10_2_sig + !regular * log10_3_over_4_sig) >> log10_2_exp;
+}
 
-  constexpr int dec_exp_min = -292;
-  auto [pow10_hi, pow10_lo] = pow10_significands[-dec_exp - dec_exp_min];
-
+// Computes a shift so that, after scaling by a power of 10, the intermediate
+// result always has a fixed 128-bit fractional part (for double).
+//
+// Different binary exponents can map to the same decimal exponent, but place
+// the decimal point at different bit positions. The shift compensates for this.
+//
+// For example, both 3 * 2**59 and 3 * 2**60 have dec_exp = 2, but dividing by
+// 10^dec_exp puts the decimal point in different bit positions:
+//   3 * 2**59 / 100 = 1.72...e+16  (needs shift = 1 + 1)
+//   3 * 2**60 / 100 = 3.45...e+16  (needs shift = 2 + 1)
+ZMIJ_INLINE auto compute_exp_shift(int bin_exp, int dec_exp) noexcept -> int {
   // log2_pow10_sig = round(log2(10) * 2**log2_pow10_exp) + 1
   constexpr int log2_pow10_sig = 217'707, log2_pow10_exp = 16;
   assert(dec_exp >= -350 && dec_exp <= 350);
   // pow10_bin_exp = floor(log2(10**-dec_exp))
   int pow10_bin_exp = -dec_exp * log2_pow10_sig >> log2_pow10_exp;
   // pow10 = ((pow10_hi << 64) | pow10_lo) * 2**(pow10_bin_exp - 127)
+  return bin_exp + pow10_bin_exp + 1;
+}
 
-  // Shift to ensure the intermediate result of multiplying by a power of 10
-  // has a fixed 128-bit fractional part. For example, 3 * 2**59 and 3 * 2**60
-  // both have dec_exp = 2 and dividing them by 10**dec_exp would have the
-  // decimal point in different (bit) positions without the shift:
-  //   3 * 2**59 / 100 = 1.72...e+16 (exp_shift = 1 + 1)
-  //   3 * 2**60 / 100 = 3.45...e+16 (exp_shift = 2 + 1)
-  int exp_shift = bin_exp + pow10_bin_exp + 1;
+// Converts a binary FP number bin_sig * 2**bin_exp to the shortest decimal
+// representation.
+template <typename UInt>
+auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
+                bool subnormal) noexcept -> fp {
+  int dec_exp = compute_dec_exp(bin_exp, regular);
+  int exp_shift = compute_exp_shift(bin_exp, dec_exp);
+  constexpr int dec_exp_min = -292;
+  auto [pow10_hi, pow10_lo] = pow10_significands[-dec_exp - dec_exp_min];
 
   constexpr int num_bits = std::numeric_limits<UInt>::digits;
   if (regular & !subnormal) [[ZMIJ_LIKELY]] {
