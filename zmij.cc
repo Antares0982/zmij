@@ -52,9 +52,9 @@
 #endif
 
 #if defined(__has_attribute) && __has_attribute(always_inline)
-#  define ZMIJ_INLINE __attribute__((always_inline))
+#  define ZMIJ_INLINE __attribute__((always_inline)) inline
 #else
-#  define ZMIJ_INLINE
+#  define ZMIJ_INLINE inline
 #endif
 
 namespace {
