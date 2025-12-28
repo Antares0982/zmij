@@ -22,20 +22,6 @@ auto ftoa(float value) -> std::string {
   return {buffer, n};
 }
 
-auto dtoa_no_buffer(double value) -> std::string {
-  auto n = zmij::write(nullptr, 0, value);
-  std::string result(n, '\0');
-  zmij::write(result.data(), n, value);
-  return result;
-}
-
-auto ftoa_no_buffer(float value) -> std::string {
-  auto n = zmij::write(nullptr, 0, value);
-  std::string result(n, '\0');
-  zmij::write(result.data(), n, value);
-  return result;
-}
-
 TEST(zmij_test, utilities) {
   EXPECT_EQ(clz(1), 63);
   EXPECT_EQ(clz(~0ull), 0);
@@ -59,7 +45,7 @@ TEST(zmij_test, umul_upper_inexact_to_odd) {
 }
 
 TEST(dtoa_test, normal) {
-  EXPECT_EQ(dtoa_no_buffer(6.62607015e-34), "6.62607015e-34");
+  EXPECT_EQ(dtoa(6.62607015e-34), "6.62607015e-34");
 
   // Exact half-ulp tie when rounding to nearest integer.
   EXPECT_EQ(dtoa(5.444310685350916e+14), "5.444310685350916e+14");
@@ -109,7 +95,6 @@ TEST(dtoa_test, zero) {
 
 TEST(dtoa_test, inf) {
   EXPECT_EQ(dtoa(std::numeric_limits<double>::infinity()), "inf");
-  EXPECT_EQ(dtoa_no_buffer(-std::numeric_limits<double>::infinity()), "-inf");
 }
 
 TEST(dtoa_test, nan) {
@@ -140,14 +125,30 @@ TEST(dtoa_test, null_terminated) {
   EXPECT_STREQ(buffer, "nan");
 }
 
+TEST(dtoa_test, no_buffer) {
+  double value = 6.62607015e-34;
+  auto n = zmij::write(nullptr, 0, value);
+  std::string result(n, '\0');
+  zmij::write(result.data(), n, value);
+  EXPECT_EQ(result, "6.62607015e-34");
+}
+
 TEST(ftoa_test, normal) {
-  EXPECT_EQ(ftoa_no_buffer(6.62607e-34f), "6.62607e-34");
+  EXPECT_EQ(ftoa(6.62607e-34f), "6.62607e-34");
   EXPECT_EQ(ftoa(1.342178e+08f), "1.342178e+08");
   EXPECT_EQ(ftoa(1.3421781e+08f), "1.3421781e+08");
 }
 
 TEST(ftoa_test, subnormal) {
   EXPECT_EQ(ftoa(std::numeric_limits<float>::denorm_min()), "1e-45");
+}
+
+TEST(ftoa_test, no_buffer) {
+  float value = 6.62607e-34;
+  auto n = zmij::write(nullptr, 0, value);
+  std::string result(n, '\0');
+  zmij::write(result.data(), n, value);
+  EXPECT_EQ(result, "6.62607e-34");
 }
 
 auto main(int argc, char** argv) -> int {
