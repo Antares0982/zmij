@@ -1126,37 +1126,46 @@ auto to_decimal(UInt bin_sig, int bin_exp, bool regular,
   return normalize<num_bits>({dec_sig, dec_exp}, subnormal);
 }
 
+template <typename Float> struct float_traits {
+  static_assert(std::numeric_limits<Float>::is_iec559, "IEEE 754 required");
+
+  static constexpr int num_bits =
+      std::numeric_limits<Float>::digits == 53 ? 64 : 32;
+  static constexpr int num_sig_bits = std::numeric_limits<Float>::digits - 1;
+  static constexpr int num_exp_bits = num_bits - num_sig_bits - 1;
+  static constexpr int exp_mask = (1 << num_exp_bits) - 1;
+  static constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
+
+  using uint = std::conditional_t<num_bits == 64, uint64_t, uint32_t>;
+  static constexpr uint implicit_bit = uint(1) << num_sig_bits;
+};
+
 }  // namespace
 
 namespace zmij {
 
 auto to_decimal(double value) -> fp {
-  static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 required");
+  using traits = float_traits<double>;
   uint64_t bits = 0;
   memcpy(&bits, &value, sizeof(value));
 
-  constexpr int num_sig_bits = std::numeric_limits<double>::digits - 1;
-  constexpr uint64_t implicit_bit = uint64_t(1) << num_sig_bits;
-  uint64_t bin_sig = bits & (implicit_bit - 1);  // binary significand
+  uint64_t bin_sig = bits & (traits::implicit_bit - 1);  // binary significand
   bool regular = bin_sig != 0;
 
-  constexpr int num_exp_bits = 64 - num_sig_bits - 1;
-  constexpr int exp_mask = (1 << num_exp_bits) - 1;
-  constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
-  int bin_exp = int(bits >> num_sig_bits) & exp_mask;  // binary exponent
-
+  int bin_exp =
+      int(bits >> traits::num_sig_bits) & traits::exp_mask;  // binary exponent
   bool subnormal = false;
-  if (((bin_exp + 1) & exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
+  if (((bin_exp + 1) & traits::exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) return {~0ull, 0};
     if (bin_sig == 0) return {0, 0};
     // Handle subnormals.
     regular = true;
-    bin_sig |= implicit_bit;
+    bin_sig |= traits::implicit_bit;
     bin_exp = 1;
     subnormal = true;
   }
-  bin_sig ^= implicit_bit;
-  bin_exp -= num_sig_bits + exp_bias;
+  bin_sig ^= traits::implicit_bit;
+  bin_exp -= traits::num_sig_bits + traits::exp_bias;
   return ::to_decimal(bin_sig, bin_exp, regular, subnormal);
 }
 
@@ -1165,27 +1174,21 @@ namespace detail {
 // It is slightly faster to return a pointer to the end than the size.
 template <typename Float>
 auto write(Float value, char* buffer) noexcept -> char* {
-  static_assert(std::numeric_limits<Float>::is_iec559, "IEEE 754 required");
-  constexpr int num_bits = std::numeric_limits<Float>::digits == 53 ? 64 : 32;
-  using uint = std::conditional_t<num_bits == 64, uint64_t, uint32_t>;
+  using traits = float_traits<Float>;
+  using uint = typename traits::uint;
   uint bits = 0;
   memcpy(&bits, &value, sizeof(value));
 
   *buffer = '-';
-  buffer += bits >> (num_bits - 1);
+  buffer += bits >> (traits::num_bits - 1);
 
-  constexpr int num_sig_bits = std::numeric_limits<Float>::digits - 1;
-  constexpr uint implicit_bit = uint(1) << num_sig_bits;
-  uint bin_sig = bits & (implicit_bit - 1);  // binary significand
+  uint bin_sig = bits & (traits::implicit_bit - 1);  // binary significand
   bool regular = bin_sig != 0;
 
-  constexpr int num_exp_bits = num_bits - num_sig_bits - 1;
-  constexpr int exp_mask = (1 << num_exp_bits) - 1;
-  constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
-  int bin_exp = int(bits >> num_sig_bits) & exp_mask;  // binary exponent
-
+  int bin_exp =
+      int(bits >> traits::num_sig_bits) & traits::exp_mask;  // binary exponent
   bool subnormal = false;
-  if (((bin_exp + 1) & exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
+  if (((bin_exp + 1) & traits::exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) {
       memcpy(buffer, bin_sig == 0 ? "inf" : "nan", 4);
       return buffer + 3;
@@ -1198,17 +1201,17 @@ auto write(Float value, char* buffer) noexcept -> char* {
     // Setting regular is not redundant: it avoids extra data dependencies
     // and register pressure on the hot path (measurable perf impact).
     regular = true;
-    bin_sig |= implicit_bit;
+    bin_sig |= traits::implicit_bit;
     bin_exp = 1;
     subnormal = true;
   }
-  bin_sig ^= implicit_bit;
-  bin_exp -= num_sig_bits + exp_bias;
+  bin_sig ^= traits::implicit_bit;
+  bin_exp -= traits::num_sig_bits + traits::exp_bias;
 
   auto [dec_sig, dec_exp] = ::to_decimal(bin_sig, bin_exp, regular, subnormal);
   char* start = buffer;
   int num_digits = std::numeric_limits<Float>::max_digits10 - 2;
-  if (num_bits == 64) {
+  if (traits::num_bits == 64) {
     dec_exp += num_digits + (dec_sig >= uint(1e16));
     buffer = write_significand17(buffer + 1, dec_sig);
   } else {
