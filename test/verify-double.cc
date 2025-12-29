@@ -47,7 +47,7 @@ constexpr auto debias(int bin_exp_biased) -> int {
 }
 
 inline auto verify(uint64_t bits, uint64_t bin_sig, int bin_exp) -> bool {
-  zmij::fp actual = to_decimal(bin_sig, bin_exp, true, false);
+  fp actual = to_decimal(bin_sig, bin_exp, true, false);
 
   double value;
   memcpy(&value, &bits, sizeof(double));
