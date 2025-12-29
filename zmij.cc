@@ -1161,7 +1161,7 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   bool regular = bin_sig != 0;
   bool subnormal = false;
   if (((bin_exp + 1) & traits::exp_mask) <= 1) [[ZMIJ_UNLIKELY]] {
-    if (bin_exp != 0) return {0, non_finite_exp};
+    if (bin_exp != 0) return {0, int(~0u >> 1)};
     if (bin_sig == 0) return {0, 0};
     // Handle subnormals.
     bin_sig |= traits::implicit_bit;

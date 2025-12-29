@@ -20,6 +20,7 @@ enum {
 };
 
 // A decimal floating-point number sig * pow(10, exp).
+// If exp is non_finite_exp then the number is a NaN or an infinity.
 struct dec_fp {
   long long sig;  // significand
   int exp;        // exponent
