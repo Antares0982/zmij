@@ -37,13 +37,10 @@ const uint64_t pow10[] = {
 };
 // clang-format on
 
-constexpr int num_sig_bits = std::numeric_limits<double>::digits - 1;
-constexpr uint64_t implicit_bit = uint64_t(1) << num_sig_bits;
-constexpr int num_exp_bits = 64 - num_sig_bits - 1;
-constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
+using traits = float_traits<double>;
 
 constexpr auto debias(int bin_exp_biased) -> int {
-  return bin_exp_biased - (num_sig_bits + exp_bias);
+  return bin_exp_biased - (traits::num_sig_bits + traits::exp_bias);
 }
 
 inline auto verify(uint64_t bits, uint64_t bin_sig, int bin_exp) -> bool {
@@ -87,17 +84,20 @@ auto is_pow10_exact_for_bin_exp(int bin_exp) -> bool {
 }  // namespace
 
 auto main() -> int {
+  int num_inexact_exponents = 0;
+  for (int exp = 0; exp < traits::exp_mask; ++exp) {
+    if (!is_pow10_exact_for_bin_exp(debias(exp))) ++num_inexact_exponents;
+  }
+  printf("Need to verify %d exponents.\n", num_inexact_exponents);
+
   // Verify correctness for doubles with a given binary exponent.
   constexpr int bin_exp_biased = 1;
-  constexpr int num_sig_bits = std::numeric_limits<double>::digits - 1;
-  constexpr uint64_t num_significands = uint64_t(1)
-                                               << 33;  // test a subset
+  constexpr uint64_t num_significands = uint64_t(1) << 33;  // test a subset
 
-  constexpr int exp_mask = (1 << num_exp_bits) - 1;
-  if (bin_exp_biased == 0 || bin_exp_biased == exp_mask)
-    printf("Unsupported exponent\n");
+  if (bin_exp_biased == 0 || bin_exp_biased == traits::exp_mask)
+    printf("Unsupported exponent.\n");
 
-  constexpr uint64_t bits = (uint64_t(bin_exp_biased) << num_sig_bits);
+  constexpr uint64_t bits = uint64_t(bin_exp_biased) << traits::num_sig_bits;
   constexpr int bin_exp = debias(bin_exp_biased);
   constexpr int dec_exp = compute_dec_exp(bin_exp, true);
   constexpr int exp_shift = compute_exp_shift(bin_exp, dec_exp);
@@ -109,12 +109,6 @@ auto main() -> int {
   }
   constexpr int pow10_index = -dec_exp - dec_exp_min;
   constexpr uint64_t pow10_lo = pow10_significands[pow10_index].lo;
-
-  int num_inexact_exponents = 0;
-  for (int exp = 0; exp < exp_mask; ++exp) {
-    if (!is_pow10_exact_for_bin_exp(debias(exp))) ++num_inexact_exponents;
-  }
-  printf("Need to verify %d exponents\n", num_inexact_exponents);
 
   unsigned num_threads = std::thread::hardware_concurrency();
   std::vector<std::thread> threads(num_threads);
@@ -163,7 +157,7 @@ auto main() -> int {
         // This checks all cases where integral and fractional can be off in
         // to_decimal. The rest is taken care of by the conservative boundary
         // checks on the fast path.
-        uint64_t bin_sig = ((begin + j) & (implicit_bit - 1)) | implicit_bit;
+        uint64_t bin_sig = ((begin + j) & (traits::implicit_bit - 1)) | traits::implicit_bit;
         uint64_t bin_sig_shifted = bin_sig << exp_shift;
         uint64_t scaled_sig_lo = pow10_lo * bin_sig_shifted;
         bool carry = scaled_sig_lo + bin_sig_shifted < scaled_sig_lo;
