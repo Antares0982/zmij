@@ -15,6 +15,10 @@ template <typename Float>
 auto write(Float value, char* buffer) noexcept -> char*;
 }  // namespace detail
 
+enum {
+  non_finite_exp = int(~0u >> 1),
+};
+
 // A decimal floating-point number sig * pow(10, exp).
 struct dec_fp {
   long long sig;  // significand
