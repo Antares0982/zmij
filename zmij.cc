@@ -1173,7 +1173,7 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   bin_sig ^= traits::implicit_bit;
   bin_exp -= traits::num_sig_bits + traits::exp_bias;
   auto [dec_sig, dec_exp] = ::to_decimal(bin_sig, bin_exp, regular, subnormal);
-  return {int64_t(dec_sig), dec_exp};
+  return {bits >> (traits::num_bits - 1) ? -dec_sig : dec_sig, dec_exp};
 }
 
 namespace detail {
