@@ -191,15 +191,15 @@ constexpr auto umul128(uint64_t x, uint64_t y) noexcept -> uint128_t {
 #endif  // ZMIJ_USE_INT128
 }
 
+constexpr auto umul128_upper64(uint64_t x, uint64_t y) noexcept -> uint64_t {
+  return uint64_t(umul128(x, y) >> 64);
+}
+
 inline auto umul192_upper128(uint64_t x_hi, uint64_t x_lo, uint64_t y) noexcept
     -> uint128 {
   uint128_t p = umul128(x_hi, y);
   uint64_t lo = uint64_t(p) + uint64_t(umul128(x_lo, y) >> 64);
   return {uint64_t(p >> 64) + (lo < uint64_t(p)), lo};
-}
-
-constexpr auto umul128_upper64(uint64_t x, uint64_t y) noexcept -> uint64_t {
-  return uint64_t(umul128(x, y) >> 64);
 }
 
 // Computes upper 64 bits of multiplication of x and y, discards the least
