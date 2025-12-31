@@ -1197,6 +1197,7 @@ auto write(Float value, char* buffer) noexcept -> char* {
   auto bits = traits::to_bits(value);
   auto raw_exp = traits::get_exp(bits);  // binary exponent
   auto bin_exp = raw_exp - traits::num_sig_bits - traits::exp_bias;
+  // Compute decimal exponent as early as possible.
   auto dec_exp = compute_dec_exp(bin_exp, true);
 
   *buffer = '-';
@@ -1260,12 +1261,12 @@ auto write(Float value, char* buffer) noexcept -> char* {
   }
   // 19 is faster or equal to 12 even for 3 digits.
   constexpr int div_exp = 19, div_sig = (1 << div_exp) / 100 + 1;
-  uint32_t a = (uint32_t(dec_exp) * div_sig) >> div_exp;  // value / 100
-  uint32_t a_with_nuls = '0' + a;
-  if (is_big_endian()) a_with_nuls <<= 24;
-  memcpy(buffer, &a_with_nuls, 4);
+  uint32_t digit = (uint32_t(dec_exp) * div_sig) >> div_exp;  // value / 100
+  uint32_t digit_with_nuls = '0' + digit;
+  if (is_big_endian()) digit_with_nuls <<= 24;
+  memcpy(buffer, &digit_with_nuls, 4);
   buffer += dec_exp >= 100;
-  memcpy(buffer, digits2(dec_exp - a * 100), 2);
+  memcpy(buffer, digits2(dec_exp - digit * 100), 2);
   return buffer + 2;
 }
 
