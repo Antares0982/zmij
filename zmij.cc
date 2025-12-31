@@ -1124,8 +1124,8 @@ ZMIJ_INLINE auto to_decimal(UInt bin_sig, int bin_exp, int dec_exp,
   int exp_shift = compute_exp_shift(bin_exp, dec_exp);
   auto [pow10_hi, pow10_lo] = pow10_significands[-dec_exp - dec_exp_min];
 
-  // Fallback to Schubfach to guarantee correctness in boundary cases and
-  // switch to strict overestimates of powers of 10.
+  // Fallback to Schubfach to guarantee correctness in boundary cases.
+  // This requires switching to strict overestimates of powers of 10.
   ++(num_bits == 64 ? pow10_lo : pow10_hi);
 
   // Shift the significand so that boundaries are integer.
