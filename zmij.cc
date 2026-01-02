@@ -404,26 +404,31 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   uint64x1_t hundredmillions64 = {abbccddee | (uint64_t(ffgghhii) << 32)};
   int32x2_t hundredmillions32 = vreinterpret_s32_u64(hundredmillions64);
 
-  int32x2_t high_10000 =
-      vshr_n_u32(vqdmulh_n_s32(hundredmillions32, c->multipliers32[0]), 9);
+  int32x2_t high_10000 = vreinterpret_s32_u32(
+      vshr_n_u32(vreinterpret_u32_s32(
+                     vqdmulh_n_s32(hundredmillions32, c->multipliers32[0])),
+                 9));
   int32x2_t tenthousands =
       vmla_n_s32(hundredmillions32, high_10000, c->multipliers32[1]);
 
-  int32x4_t extended = vshll_n_u16(tenthousands, 0);
+  int32x4_t extended =
+      vreinterpretq_s32_u32(vshll_n_u16(vreinterpret_u16_s32(tenthousands), 0));
 
   // Compiler barrier, or clang breaks the subsequent MLA into UADDW + MUL.
   asm("" : "+w"(extended));
 
   int32x4_t high_100 = vqdmulhq_n_s32(extended, c->multipliers32[2]);
-  int32x4_t hundreds = vmlaq_n_s32(extended, high_100, c->multipliers32[3]);
+  int16x8_t hundreds = vreinterpretq_s16_s32(
+      vmlaq_n_s32(extended, high_100, c->multipliers32[3]));
   int16x8_t high_10 = vqdmulhq_n_s16(hundreds, c->multipliers16[0]);
-  int16x8_t digits =
-      vrev64q_u8(vmlaq_n_s16(hundreds, high_10, c->multipliers16[1]));
-  int16x8_t ascii = vaddq_u16(digits, vdupq_n_s8('0'));
+  uint8x16_t digits = vrev64q_u8(vreinterpretq_u8_s16(
+      vmlaq_n_s16(hundreds, high_10, c->multipliers16[1])));
+  uint16x8_t ascii = vaddq_u16(vreinterpretq_u16_u8(digits),
+                               vreinterpretq_u16_s8(vdupq_n_s8('0')));
 
   memcpy(buffer, &ascii, 16);
 
-  uint16x8_t is_zero = vceqzq_u8(digits);
+  uint16x8_t is_zero = vreinterpretq_u16_u8(vceqq_u8(digits, vdupq_n_u8(0)));
   uint64_t zeroes =
       ~vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(is_zero, 4)), 0);
 
