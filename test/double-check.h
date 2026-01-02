@@ -12,7 +12,6 @@ inline auto find_min_n(uint64_t step, uint128_t mod, uint64_t lower,
 
   if (lower == 0) return 0;  // Current position is already a hit.
 
-  step = uint64_t(step % mod);
   if (step == 0) return not_found;
 
   // Check for direct hit without wrapping.
