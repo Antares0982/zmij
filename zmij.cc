@@ -390,19 +390,19 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   asm("" : "+r"(hundred_million));
 
   // Equivalent to abbccddee = value / 100000000, ffgghhii = value % 100000000.
-  uint64_t abbccddee = (__uint128_t(value) * c->mul_const) >> 90;
+  uint64_t abbccddee = uint64_t(umul128(value, c->mul_const) >> 90);
   uint64_t ffgghhii = value - abbccddee * hundred_million;
 
   // We could probably make this bit faster, but we're preferring to
   // reuse the constants for now.
-  uint64_t a = (__uint128_t(abbccddee) * c->mul_const) >> 90;
+  uint64_t a = uint64_t(umul128(abbccddee, c->mul_const) >> 90);
   abbccddee -= a * hundred_million;
 
   char* start = buffer;
   buffer = write_if_nonzero(buffer, a);
 
   uint64x1_t hundredmillions64 = {abbccddee | (uint64_t(ffgghhii) << 32)};
-  uint64x1_t hundredmillions32 = vreinterpret_s32_u64(hundredmillions64);
+  int32x2_t hundredmillions32 = vreinterpret_s32_u64(hundredmillions64);
 
   int32x2_t high_10000 =
       vshr_n_u32(vqdmulh_n_s32(hundredmillions32, c->multipliers32[0]), 9);
