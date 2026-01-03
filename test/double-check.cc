@@ -138,9 +138,6 @@ auto main() -> int {
       printf("Thread %d processing 0x%016llx - 0x%016llx\n", i, bin_sig_first,
              bin_sig_last);
 
-      auto last_update_time = std::chrono::steady_clock::now();
-      bool has_errors = false;
-
       constexpr uint64_t pow10_lo = pow10_significands[-dec_exp].lo;
       constexpr uint64_t exp_bits =
         uint64_t(raw_exp) << traits::num_sig_bits ^ traits::implicit_bit;
@@ -153,6 +150,7 @@ auto main() -> int {
       // This checks all cases where integral and fractional can be off in
       // to_decimal. The rest is taken care of by the conservative boundary
       // checks on the fast path.
+      bool has_errors = false;
       num_special_cases += find_carried_away_doubles<pow10_lo, exp_shift>(
           bin_sig_first, bin_sig_last,
           [&](uint64_t index) {
@@ -162,18 +160,28 @@ auto main() -> int {
           },
           [&](uint64_t num_doubles) {
             num_processed_doubles += num_doubles;
-            if (i != 0) return;
-            auto now = std::chrono::steady_clock::now();
-            if (now - last_update_time >= std::chrono::seconds(1)) {
-              last_update_time = now;
-              printf("Progress: %7.4f%%\n",
-                     num_processed_doubles * 100.0 / num_significands);
-            }
           });
     };
     threads[i] = std::thread(fun);
   }
+
+  std::atomic<bool> done(false);
+  std::thread progress([&]() {
+    auto last_update_time = std::chrono::steady_clock::now();
+    while (!done) {
+      auto now = std::chrono::steady_clock::now();
+      if (now - last_update_time >= std::chrono::seconds(1)) {
+        last_update_time = now;
+        printf("Progress: %7.4f%%\n",
+                num_processed_doubles * 100.0 / num_significands);
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  });
+
   for (int i = 0; i < num_threads; ++i) threads[i].join();
+  done = true;
+  progress.join();
   auto finish = std::chrono::steady_clock::now();
 
   using seconds = std::chrono::duration<double>;
