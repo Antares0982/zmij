@@ -136,40 +136,42 @@ auto main() -> int {
     if (bin_sig_first == 0) ++bin_sig_first;
     bin_sig_first |= traits::implicit_bit;
     bin_sig_last |= traits::implicit_bit;
-    threads[i] =
-        std::thread([i, bin_sig_first, bin_sig_last, &num_processed_doubles,
-                     &num_special_cases, &num_errors] {
-          printf("Thread %d processing 0x%016llx - 0x%016llx\n", i,
-                 bin_sig_first, bin_sig_last);
 
-          auto last_update_time = std::chrono::steady_clock::now();
-          bool has_errors = false;
+    auto fun = [i, bin_sig_first, bin_sig_last, &num_processed_doubles,
+                &num_special_cases, &num_errors] {
+      printf("Thread %d processing 0x%016llx - 0x%016llx\n", i, bin_sig_first,
+             bin_sig_last);
 
-          // The real power of 10 is in the range [pow10, pow10 + 1) ignoring
-          // the exponent, where pow10 = (pow10_hi << 64) | pow10_lo.
+      auto last_update_time = std::chrono::steady_clock::now();
+      bool has_errors = false;
 
-          // Check for possible carry due to pow10 approximation error.
-          // This checks all cases where integral and fractional can be off in
-          // to_decimal. The rest is taken care of by the conservative boundary
-          // checks on the fast path.
-          num_special_cases += find_carried_away_doubles<pow10_lo, exp_shift>(
-              bin_sig_first, bin_sig_last,
-              [&](uint64_t index) {
-                uint64_t bin_sig = bin_sig_first + index;
-                uint64_t bits = exp_bits | (bin_sig ^ traits::implicit_bit);
-                if (!verify(bits, bin_sig, bin_exp, has_errors)) ++num_errors;
-              },
-              [&](uint64_t num_doubles) {
-                num_processed_doubles += num_doubles;
-                if (i != 0) return;
-                auto now = std::chrono::steady_clock::now();
-                if (now - last_update_time >= std::chrono::seconds(1)) {
-                  last_update_time = now;
-                  printf("Progress: %7.4f%%\n",
-                         num_processed_doubles * 100.0 / num_significands);
-                }
-              });
-        });
+      // With great power of 10 comes great responsibility to check the
+      // approximation error. The exact power of 10 significand is in the range
+      // [pow10, pow10 + 1), where pow10 = (pow10_hi << 64) | pow10_lo.
+
+      // Check for possible carry due to pow10 approximation error.
+      // This checks all cases where integral and fractional can be off in
+      // to_decimal. The rest is taken care of by the conservative boundary
+      // checks on the fast path.
+      num_special_cases += find_carried_away_doubles<pow10_lo, exp_shift>(
+          bin_sig_first, bin_sig_last,
+          [&](uint64_t index) {
+            uint64_t bin_sig = bin_sig_first + index;
+            uint64_t bits = exp_bits | (bin_sig ^ traits::implicit_bit);
+            if (!verify(bits, bin_sig, bin_exp, has_errors)) ++num_errors;
+          },
+          [&](uint64_t num_doubles) {
+            num_processed_doubles += num_doubles;
+            if (i != 0) return;
+            auto now = std::chrono::steady_clock::now();
+            if (now - last_update_time >= std::chrono::seconds(1)) {
+              last_update_time = now;
+              printf("Progress: %7.4f%%\n",
+                     num_processed_doubles * 100.0 / num_significands);
+            }
+          });
+    };
+    threads[i] = std::thread(fun);
   }
   for (int i = 0; i < num_threads; ++i) threads[i].join();
   auto finish = std::chrono::steady_clock::now();
