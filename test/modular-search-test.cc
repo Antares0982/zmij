@@ -6,7 +6,7 @@
 
 #include "modular-search.h"
 
-TEST(check_test, find_min_n_test) {
+TEST(find_min_n_test, basic) {
   // (12345 * 0) % 100000 is in [0, 1000].
   EXPECT_EQ((find_min_n<12345, 100000>(0, 1000)), 0);
 
@@ -26,7 +26,9 @@ TEST(check_test, find_min_n_test) {
 
   // Not found because step and mod are even while the target is odd.
   EXPECT_EQ((find_min_n<2, 100>(5, 5)), not_found);
+}
 
+TEST(find_min_n_test, double_search) {
   constexpr uint64_t bin_sig_begin = (uint64_t(1) << 52) | 1;
   constexpr uint64_t bin_sig_end = (uint64_t(1) << 53) - 1;
   constexpr uint64_t pow10_lo = 0x6c07a2c26a8346d1;
@@ -47,6 +49,12 @@ TEST(check_test, find_min_n_test) {
   // Verify it is the smallest n: (x0 + (n - 1) * step) should be < threshold.
   EXPECT_GT(n, 0);
   EXPECT_LT(start + (n - 1) * step, threshold);
+}
+
+TEST(find_min_n_test, overflow) {
+    uint64_t n = find_min_n<0x6000000000000001ULL, (uint128_t(1) << 64)>(
+      0xFFFFFFFFFFFFFF00ULL, 0xFFFFFFFFFFFFFFFFULL);
+    EXPECT_EQ(n, 0x1fffffffffffff05);
 }
 
 auto main(int argc, char** argv) -> int {
