@@ -180,7 +180,6 @@ auto main(int argc, char** argv) -> int {
   printf("Using %u threads\n", num_threads);
 
   stats s;
-
   auto start = std::chrono::steady_clock::now();
   for (unsigned i = 0; i < num_threads; ++i) {
     uint64_t bin_sig_first = (num_significands * i / num_threads);
@@ -192,7 +191,7 @@ auto main(int argc, char** argv) -> int {
     bin_sig_last |= traits::implicit_bit;
 
     threads[i] = std::thread([i, raw_exp, bin_sig_first, bin_sig_last, &s] {
-      printf("Thread %d processing 0x%016llx - 0x%016llx\n", i, bin_sig_first,
+      printf("Thread %3d processing 0x%016llx - 0x%016llx\n", i, bin_sig_first,
              bin_sig_last);
       dispatch<1>(i, raw_exp, bin_sig_first, bin_sig_last, s);
     });
