@@ -87,19 +87,15 @@ auto is_pow10_exact_for_bin_exp(int bin_exp) -> bool {
   return -dec_exp >= exact_begin && -dec_exp <= exact_end;
 }
 
-}  // namespace
+constexpr uint64_t num_significands = uint64_t(1) << 36;
 
-auto main() -> int {
-  // Verify correctness for doubles with a given binary exponent and
-  // the first num_significands significands.
-  constexpr int raw_exp = 1;
-  constexpr uint64_t num_significands = uint64_t(1) << 36;
+// Verify correctness for doubles with a given binary exponent and
+// the first num_significands significands.
+// raw_exp=1 verified on commit 410dff3f with 13,220,633,789,575 hits.
+template <int raw_exp> int run() {
+  static_assert(raw_exp != 0 && raw_exp != traits::exp_mask);
 
   constexpr int bin_exp = debias(raw_exp);
-  if (raw_exp == 0 || raw_exp == traits::exp_mask) {
-    fprintf(stderr, "Unsupported exponent\n");
-    return 1;
-  }
   int num_inexact_exponents = 0;
   for (int exp = 0; exp < traits::exp_mask; ++exp) {
     if (!is_pow10_exact_for_bin_exp(debias(exp))) ++num_inexact_exponents;
@@ -196,4 +192,25 @@ auto main() -> int {
       num_special_cases.load(), num_errors.load(), num_processed_doubles.load(),
       std::chrono::duration_cast<seconds>(finish - start).count());
   return num_errors != 0 ? 1 : 0;
+}
+
+template <int n> int run(int raw_exp) {
+  if constexpr (n == 100) {
+    fprintf(stderr, "Unsupported exponent %d\n", raw_exp);
+    return 1;
+  } else {
+    return raw_exp == n ? run<n>() : run<n + 1>(raw_exp);
+  }
+}
+
+}  // namespace
+
+auto main(int argc, char** argv) -> int {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <raw_exp>\n", argv[0]);
+    return 1;
+  }
+  int raw_exp = 0;
+  sscanf(argv[1], "%d", &raw_exp);
+  return run<1>(raw_exp);
 }
