@@ -126,14 +126,16 @@ void run(uint64_t bin_sig_first, uint64_t bin_sig_last, stats& s) {
 }
 
 template <int n>
-void dispatch(int raw_exp, uint64_t bin_sig_first, uint64_t bin_sig_last,
-              stats& s) {
+void dispatch(int thread_index, int raw_exp, uint64_t bin_sig_first,
+              uint64_t bin_sig_last, stats& s) {
   if constexpr (n == 100) {
-    fprintf(stderr, "Unsupported exponent %d\n", raw_exp);
-    exit(1);
+    if (thread_index == 0) {
+      fprintf(stderr, "Unsupported exponent %d\n", raw_exp);
+      exit(1);
+    }
   } else {
     if (raw_exp == n) return run<n>(bin_sig_first, bin_sig_last, s);
-    dispatch<n + 1>(raw_exp, bin_sig_first, bin_sig_last, s);
+    dispatch<n + 1>(thread_index, raw_exp, bin_sig_first, bin_sig_last, s);
   }
 }
 
@@ -192,7 +194,7 @@ auto main(int argc, char** argv) -> int {
     threads[i] = std::thread([i, raw_exp, bin_sig_first, bin_sig_last, &s] {
       printf("Thread %d processing 0x%016llx - 0x%016llx\n", i, bin_sig_first,
              bin_sig_last);
-      dispatch<1>(raw_exp, bin_sig_first, bin_sig_last, s);
+      dispatch<1>(i, raw_exp, bin_sig_first, bin_sig_last, s);
     });
   }
 
