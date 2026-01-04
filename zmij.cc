@@ -247,12 +247,12 @@ template <typename Float> struct float_traits : std::numeric_limits<Float> {
 struct pow10_significands_table {
   uint128 data[617];
 
-  constexpr const uint128& operator[](int dec_exp) const {
+  constexpr auto operator[](int dec_exp) const noexcept -> const uint128& {
     constexpr int dec_exp_min = -292;
     return data[dec_exp - dec_exp_min];
   }
 
-  constexpr pow10_significands_table() : data() {
+  constexpr pow10_significands_table() noexcept : data() {
     struct uint192 {
       uint64_t w0, w1, w2;  // w0 = least significant, w2 = most significant
     };
