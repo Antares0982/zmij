@@ -63,11 +63,12 @@ auto get_random_digit_data(int digit) -> const double* {
 using duration = std::chrono::steady_clock::duration;
 
 struct digit_result {
-  double min_ns = std::numeric_limits<double>::max();
-  double max_ns = std::numeric_limits<double>::min();
+  double duration_ns = std::numeric_limits<double>::min();
 };
 
 struct benchmark_result {
+  double min_ns = std::numeric_limits<double>::max();
+  double max_ns = std::numeric_limits<double>::min();
   digit_result per_digit[max_digits + 1];
 };
 
@@ -97,9 +98,9 @@ auto bench_random_digit(void (*dtoa)(double, char*), const std::string& name)
             .count();
     ns /= num_iterations_per_digit * num_doubles_per_digit;
 
-    digit_result& dr = result.per_digit[digit];
-    if (ns < dr.min_ns) dr.min_ns = ns;
-    if (ns > dr.max_ns) dr.max_ns = ns;
+    result.per_digit[digit].duration_ns = ns;
+    if (ns < result.min_ns) result.min_ns = ns;
+    if (ns > result.max_ns) result.max_ns = ns;
   }
   return result;
 }
@@ -111,9 +112,7 @@ auto main() -> int {
 
   for (const method& m : methods) {
     benchmark_result result = bench_random_digit(m.dtoa, m.name);
-    for (int i = 1; i <= max_digits; ++i) {
-      digit_result& dr = result.per_digit[i];
-      fmt::print("{:2}: {:.2f}...{:.2f}ns\n", i, dr.min_ns, dr.max_ns);
-    }
+    fmt::print("{:9}: {:5.2f}..{:.2f}ns\n", m.name, result.min_ns,
+               result.max_ns);
   }
 }
