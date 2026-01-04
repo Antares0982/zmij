@@ -550,9 +550,9 @@ ZMIJ_INLINE auto to_decimal(UInt bin_sig, int bin_exp, int dec_exp,
     //
     // fractional = 2840565642863009226, fractional' = fractional / 2**64
     //
-    //     50507837461000000        c                          50507837461000010
-    //              s              l|   L                             S
-    // ───┬────┬────┼────┬────┬────┼*-──┼────┬────┬────┬────┬────┬────┼-*--┬───
+    //     50507837461000000        c               upper     50507837461000010
+    //              s              l|   L             |               S
+    // ───┬────┬────┼────┬────┬────┼*-──┼────┬────┬───*┬────┬────┬────┼-*--┬───
     //    8    9    0    1    2    3    4    5    6    7    8    9    0 |  1
     //            └─────────────────┼─────────────────┘                next
     //                             1ulp
@@ -564,10 +564,11 @@ ZMIJ_INLINE auto to_decimal(UInt bin_sig, int bin_exp, int dec_exp,
     if (
         // Exact half-ulp tie when rounding to nearest integer.
         fractional != half_ulp &&
-        // Exact half-ulp tie when rounding to nearest 10.
+        // Boundary case when rounding down to nearest 10.
         scaled_sig_mod10 != scaled_half_ulp &&
-        // Near-boundary case for rounding to nearest 10.
-        ten - upper > 1u) [[ZMIJ_LIKELY]] {
+        // Near-boundary case for rounding up to nearest 10.
+        ten - upper > 1u // upper != ten && upper != ten - 1
+      ) [[ZMIJ_LIKELY]] {
       bool round_up = upper >= ten;
       int64_t shorter = int64_t(integral - digit + round_up * 10);
       int64_t longer = int64_t(integral + (fractional >= half_ulp));
