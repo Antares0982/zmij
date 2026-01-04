@@ -155,7 +155,7 @@ auto main() -> int {
   fmt::print("Mean of per-digit medians:\n");
   for (const method& m : methods) {
     benchmark_result result = bench_random_digit(m.dtoa, m.name);
-    fmt::print("{:9}: {:5.2f}ns ({:5.2f} - {:5.2f}ns) {}\n", m.name,
+    fmt::print("{:9}: {:5.2f}ns ({:5.2f}ns - {:5.2f}ns) {}\n", m.name,
                result.aggregated_ns, result.min_ns, result.max_ns,
                result.noisy ? "noisy" : "");
   }
