@@ -415,21 +415,16 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   };
 
   static const to_string_constants constants;
-
   const to_string_constants* c = &constants;
 
-#  ifndef _MSC_VER
   // Compiler barrier, or clang doesn't load from memory and generates 15 more
   // instructions
-  asm("" : "+r"(c));
-#  endif
+  ZMIJ_ASM(("" : "+r"(c)));
 
   uint64_t hundred_million = c->hundred_million;
 
-#  ifndef _MSC_VER
   // Compiler barrier, or clang narrows the load to 32-bit and unpairs it.
-  asm("" : "+r"(hundred_million));
-#  endif
+  ZMIJ_ASM(("" : "+r"(hundred_million)));
 
   // Equivalent to abbccddee = value / 100000000, ffgghhii = value % 100000000.
   uint64_t abbccddee = uint64_t(umul128(value, c->mul_const) >> 90);
@@ -456,10 +451,8 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   int32x4_t extended =
       vreinterpretq_s32_u32(vshll_n_u16(vreinterpret_u16_s32(tenthousands), 0));
 
-#  ifndef _MSC_VER
   // Compiler barrier, or clang breaks the subsequent MLA into UADDW + MUL.
-  asm("" : "+w"(extended));
-#  endif
+  ZMIJ_ASM(("" : "+w"(extended)));
 
   int32x4_t high_100 = vqdmulhq_n_s32(extended, c->multipliers32[2]);
   int16x8_t hundreds = vreinterpretq_s16_s32(
