@@ -6,8 +6,19 @@
 #include "dragonbox/dragonbox_to_chars.h"
 #include "zmij.h"
 
+namespace zmij {
+int dtoa(...);
+int to_string(...);
+int write(...);
+}
+
 void dtoa_zmij(double value, char* buffer) {
-  zmij::write(buffer, zmij::double_buffer_size, value);
+  if constexpr (!std::is_same_v<decltype(zmij::dtoa(value, buffer)), int>)
+    zmij::dtoa(value, buffer);
+  if constexpr (!std::is_same_v<decltype(zmij::to_string(value, buffer)), int>)
+    zmij::to_string(value, buffer);
+  if constexpr (!std::is_same_v<decltype(zmij::write(buffer, 25, value)), int>)
+    zmij::write(buffer, 25, value);
 }
 
 REGISTER_METHOD(zmij);

@@ -6,6 +6,7 @@
 import csv
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -59,37 +60,36 @@ def benchmark_commit(sha: str, workdir: Path, writer: csv.Writer):
             pass
 
 def main():
-    workdir = Path("zmij_bench")
-    if not workdir.exists():
+    with tempfile.TemporaryDirectory(prefix="zmij_bench_") as tmp:
+        workdir = Path(tmp)
+
         print("Cloning repository...")
         run(["git", "clone", "https://github.com/vitaut/zmij.git",
              str(workdir)])
-    else:
-        run(["git", "fetch"], cwd=workdir)
 
-    commits = run(
-        ["git", "rev-list", "--reverse", "HEAD"],
-        cwd=workdir
-    ).split()
+        commits = run(
+            ["git", "rev-list", "--reverse", "HEAD"],
+            cwd=workdir
+        ).split()
 
-    csv_path = Path("results.csv")
-    new_file = not csv_path.exists()
-    with csv_path.open("a", newline="") as f:
-        writer = csv.writer(f)
-        if new_file:
-            writer.writerow(["commit", "method", "aggregated_ns",
-                             "min_ns", "max_ns", "flags"])
+        csv_path = Path("results.csv")
+        new_file = not csv_path.exists()
+        with csv_path.open("a", newline="") as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow(["commit", "method", "aggregated_ns",
+                                "min_ns", "max_ns", "flags"])
 
-        for i, sha in enumerate(commits, 1):
-            print(f"[{i}/{len(commits)}] {sha[:12]}")
-            try:
-                benchmark_commit(sha, workdir, writer)
-                f.flush()
-            except Exception as e:
-                print(f"  FAILED: {e}")
-                writer.writerow([sha, "__FAILED__", "", "", "", str(e)])
+            for i, sha in enumerate(commits, 1):
+                print(f"[{i}/{len(commits)}] {sha[:12]}")
+                try:
+                    benchmark_commit(sha, workdir, writer)
+                    f.flush()
+                except Exception as e:
+                    print(f"  FAILED: {e}")
+                    writer.writerow([sha, "__FAILED__", "", "", "", str(e)])
 
-    print(f"\nResults written to {csv_path}")
+        print(f"\nResults written to {csv_path}")
 
 
 if __name__ == "__main__":
