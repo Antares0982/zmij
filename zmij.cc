@@ -668,8 +668,8 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   auto bin_sig = traits::get_sig(bits);  // binary significand
   auto bin_exp = traits::get_exp(bits);  // binary exponent
   bool regular = bin_sig != 0;
-  bool subnormal = ((bin_exp + 1) & traits::exp_mask) <= 1;
-  if (subnormal) [[ZMIJ_UNLIKELY]] {
+  bool special = ((bin_exp + 1) & traits::exp_mask) <= 1;
+  if (special) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) return {0, int(~0u >> 1)};
     if (bin_sig == 0) return {0, 0};
     bin_sig |= traits::implicit_bit;
@@ -679,7 +679,7 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   bin_sig ^= traits::implicit_bit;
   bin_exp -= traits::num_sig_bits + traits::exp_bias;
   auto [dec_sig, dec_exp] = ::to_decimal(
-      bin_sig, bin_exp, compute_dec_exp(bin_exp, true), regular, subnormal);
+      bin_sig, bin_exp, compute_dec_exp(bin_exp, true), regular, special);
   return {traits::is_negative(bits) ? -dec_sig : dec_sig, dec_exp};
 }
 
