@@ -34,7 +34,8 @@ int main() {
 ## Performance
 
 More than 4x faster than [Ryu](https://github.com/ulfjack/ryu) used by multiple
-C++ standard library implementations and ~2.5x faster than
+C++ standard library implementations, 9x faster than [double-conversion](
+https://github.com/google/double-conversion) and ~2.5x faster than
 [Schubfach](https://github.com/vitaut/schubfach)
 on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark) run on Apple M1.
 
