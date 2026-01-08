@@ -10,7 +10,7 @@ namespace zmij {
 int dtoa(...);
 int to_string(...);
 int write(...);
-}
+}  // namespace zmij
 
 void dtoa_zmij(double value, char* buffer) {
   if constexpr (!std::is_same_v<decltype(zmij::dtoa(value, buffer)), int>)

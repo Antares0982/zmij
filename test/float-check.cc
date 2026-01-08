@@ -73,6 +73,6 @@ auto main() -> int {
 
   using seconds = std::chrono::duration<double>;
   print("Tested {} values in {:.2f} seconds\n", num_processed_floats.load(),
-         std::chrono::duration_cast<seconds>(finish - start).count());
+        std::chrono::duration_cast<seconds>(finish - start).count());
   return num_errors != 0 ? 1 : 0;
 }

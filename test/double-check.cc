@@ -69,10 +69,9 @@ inline auto verify(uint64_t bits, uint64_t bin_sig, int bin_exp, int raw_exp,
 
   if (has_errors) return false;
   has_errors = true;
-  print(
-      "Output mismatch for {} ({} * 2**{}): {} * 10**{} != {} * 10**{}\n",
-      value, bin_sig, bin_exp, actual.sig, actual.exp,
-      expected.significand, expected.exponent);
+  print("Output mismatch for {} ({} * 2**{}): {} * 10**{} != {} * 10**{}\n",
+        value, bin_sig, bin_exp, actual.sig, actual.exp, expected.significand,
+        expected.exponent);
   return false;
 }
 
@@ -117,7 +116,8 @@ void run(uint64_t bin_sig_first, uint64_t bin_sig_last, stats& s) {
         }
         uint64_t bin_sig = bin_sig_first + index;
         uint64_t bits = exp_bits ^ bin_sig;
-        if (!verify(bits, bin_sig, bin_exp, raw_exp, has_errors)) ++s.num_errors;
+        if (!verify(bits, bin_sig, bin_exp, raw_exp, has_errors))
+          ++s.num_errors;
       });
   s.num_processed_doubles += bin_sig_last - bin_sig_first - last_index + 1;
 }
@@ -168,7 +168,7 @@ auto main(int argc, char** argv) -> int {
     if (!is_pow10_exact_for_bin_exp(debias(exp))) ++num_inexact_exponents;
   }
   print("Verifying binary exponent {} (0x{:03x}); {} total\n", bin_exp, raw_exp,
-         num_inexact_exponents);
+        num_inexact_exponents);
 
   int dec_exp = compute_dec_exp(bin_exp, true);
   int exp_shift = compute_exp_shift<64, true>(bin_exp, dec_exp);
@@ -195,7 +195,7 @@ auto main(int argc, char** argv) -> int {
 
     threads[i] = std::thread([i, raw_exp, bin_sig_first, bin_sig_last, &s] {
       print("Thread {:3} processing 0x{:016x} - 0x{:016x}\n", i, bin_sig_first,
-             bin_sig_last);
+            bin_sig_last);
       dispatch<1>(i, raw_exp, bin_sig_first, bin_sig_last, s);
     });
   }
@@ -208,7 +208,7 @@ auto main(int argc, char** argv) -> int {
       if (now - last_update_time >= std::chrono::seconds(1) || done) {
         last_update_time = now;
         print("\rProgress: {:6.2f}%",
-               s.num_processed_doubles * 100.0 / num_significands);
+              s.num_processed_doubles * 100.0 / num_significands);
         fflush(stdout);
         if (done) break;
       }
