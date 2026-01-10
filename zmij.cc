@@ -268,9 +268,13 @@ template <typename Float> struct float_traits : std::numeric_limits<Float> {
 // 128-bit significands of powers of 10 rounded down.
 // Generated using 192-bit arithmetic method by Dougall Johnson.
 struct pow10_significands_table {
-  static constexpr int num_pow10 = 617;
+#if __aarch64__
   static constexpr bool split_tables = true;
+#else
+  static constexpr bool split_tables = false;
+#endif
 
+  static constexpr int num_pow10 = 617;
   uint64_t data[num_pow10 * 2] = {};
 
   ZMIJ_CONSTEXPR auto operator[](int dec_exp) const noexcept -> uint128 {
