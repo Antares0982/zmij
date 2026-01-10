@@ -498,12 +498,12 @@ inline void write8(char* buffer, uint64_t value) noexcept {
 auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 #if ZMIJ_USE_NEON
   // An optimized version for NEON by Dougall Johnson.
+  constexpr int32_t neg10k = -10000 + 0x10000;
   struct to_string_constants {
     uint64_t mul_const = 0xabcc77118461cefd;
     uint64_t hundred_million = 100000000;
-    int32_t multipliers32[4] = {div10k_sig, -10000 + 0x10000, div100_sig << 12,
-                                -100 + 0x10000};
-    int16_t multipliers16[8] = {0xce0, -10 + 0x100};
+    int32_t multipliers32[4] = {div10k_sig, neg10k, div100_sig << 12, neg100};
+    int16_t multipliers16[8] = {0xce0, neg10};
   };
 
   static const to_string_constants constants;
@@ -530,31 +530,33 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   char* start = buffer;
   buffer = write_if_nonzero(buffer, a);
 
-  uint64x1_t ffgghhii_bbccddee64 = {(uint64_t(ffgghhii) << 32) | bbccddee};
-  int32x2_t ffgghhii_bbccddee = vreinterpret_s32_u64(ffgghhii_bbccddee64);
+  uint64x1_t ffgghhii_bbccddee_64 = {(uint64_t(ffgghhii) << 32) | bbccddee};
+  int32x2_t bbccddee_ffgghhii = vreinterpret_s32_u64(ffgghhii_bbccddee_64);
 
-  int32x2_t quo10k = vreinterpret_s32_u32(
+  int32x2_t bbcc_ffgg = vreinterpret_s32_u32(
       vshr_n_u32(vreinterpret_u32_s32(
-                     vqdmulh_n_s32(ffgghhii_bbccddee, c->multipliers32[0])),
+                     vqdmulh_n_s32(bbccddee_ffgghhii, c->multipliers32[0])),
                  9));
-  int32x2_t rem10k = vmla_n_s32(ffgghhii_bbccddee, quo10k, c->multipliers32[1]);
+  int32x2_t ddee_bbcc_hhii_ffgg_32 =
+      vmla_n_s32(bbccddee_ffgghhii, bbcc_ffgg, c->multipliers32[1]);
 
-  int32x4_t extended =
-      vreinterpretq_s32_u32(vshll_n_u16(vreinterpret_u16_s32(rem10k), 0));
+  int32x4_t ddee_bbcc_hhii_ffgg = vreinterpretq_s32_u32(
+      vshll_n_u16(vreinterpret_u16_s32(ddee_bbcc_hhii_ffgg_32), 0));
 
   // Compiler barrier, or clang breaks the subsequent MLA into UADDW + MUL.
-  ZMIJ_ASM(("" : "+w"(extended)));
+  ZMIJ_ASM(("" : "+w"(ddee_bbcc_hhii_ffgg)));
 
-  int32x4_t high_100 = vqdmulhq_n_s32(extended, c->multipliers32[2]);
-  int16x8_t hundreds = vreinterpretq_s16_s32(
-      vmlaq_n_s32(extended, high_100, c->multipliers32[3]));
-  int16x8_t high_10 = vqdmulhq_n_s16(hundreds, c->multipliers16[0]);
+  int32x4_t dd_bb_hh_ff =
+      vqdmulhq_n_s32(ddee_bbcc_hhii_ffgg, c->multipliers32[2]);
+  int16x8_t ee_dd_cc_bb_ii_hh_gg_ff = vreinterpretq_s16_s32(
+      vmlaq_n_s32(ddee_bbcc_hhii_ffgg, dd_bb_hh_ff, c->multipliers32[3]));
+  int16x8_t high_10s =
+      vqdmulhq_n_s16(ee_dd_cc_bb_ii_hh_gg_ff, c->multipliers16[0]);
   uint8x16_t digits = vrev64q_u8(vreinterpretq_u8_s16(
-      vmlaq_n_s16(hundreds, high_10, c->multipliers16[1])));
-  uint16x8_t ascii = vaddq_u16(vreinterpretq_u16_u8(digits),
-                               vreinterpretq_u16_s8(vdupq_n_s8('0')));
-
-  memcpy(buffer, &ascii, 16);
+      vmlaq_n_s16(ee_dd_cc_bb_ii_hh_gg_ff, high_10s, c->multipliers16[1])));
+  uint16x8_t str = vaddq_u16(vreinterpretq_u16_u8(digits),
+                             vreinterpretq_u16_s8(vdupq_n_s8('0')));
+  memcpy(buffer, &str, sizeof(str));
 
   uint16x8_t is_zero = vreinterpretq_u16_u8(vceqq_u8(digits, vdupq_n_u8(0)));
   uint64_t zeroes =
