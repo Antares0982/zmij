@@ -23,7 +23,6 @@ struct dec_fp {
 #include <limits>       // std::numeric_limits
 #include <type_traits>  // std::conditional_t
 
-
 #ifndef ZMIJ_USE_SIMD
 #  define ZMIJ_USE_SIMD 1
 #endif
@@ -40,7 +39,8 @@ struct dec_fp {
 // Use the provided definition
 #elif defined(__SSE2__)
 #  define ZMIJ_USE_SSE 1
-#elif defined(_MSC_VER) && (defined(_M_AMD64) || (defined(_M_IX86_FP) && _M_IX86FP == 2))
+#elif defined(_MSC_VER) && \
+    (defined(_M_AMD64) || (defined(_M_IX86_FP) && _M_IX86FP == 2))
 #  define ZMIJ_USE_SSE 1
 #else
 #  define ZMIJ_USE_SSE 0
@@ -50,7 +50,8 @@ struct dec_fp {
 // Use the provided definition
 #elif defined(__SSE4_1__)
 #  define ZMIJ_USE_SSE4_1 1
-#elif defined(_MSC_VER) && defined(__AVX__) // There's no way to check for /arch:SSE4.2 specifically
+#elif defined(_MSC_VER) && \
+    defined(__AVX__)  // There's no way to check for /arch:SSE4.2 specifically
 #  define ZMIJ_USE_SSE4_1 1
 #else
 #  define ZMIJ_USE_SSE4_1 0
@@ -61,7 +62,8 @@ struct dec_fp {
 #endif
 
 #if ZMIJ_USE_SSE4_1 && !ZMIJ_USE_SSE
-#  error "User asked for SSE4.1 but SSE is not available or explicitly not requested."
+#  error \
+      "User asked for SSE4.1 but SSE is not available or explicitly not requested."
 #endif
 
 #if ZMIJ_USE_SSE
@@ -451,19 +453,26 @@ inline auto digits2(size_t value) noexcept -> const char* {
   return &data[value * 2];
 }
 
+constexpr int div10k_exp = 40;
+constexpr uint32_t div10k_sig = uint32_t((1ull << div10k_exp) / 10000 + 1);
+constexpr int div100_exp = 19;
+constexpr uint32_t div100_sig = (1 << div100_exp) / 100 + 1;
+
+constexpr uint64_t zeros = 0x0101010101010101u * '0';
+
 auto to_bcd8(uint64_t abcdefgh) noexcept -> uint64_t {
   // An optimization from Xiang JunBo.
-  // Three steps BCD.  Base 10000 -> base 100 -> base 10.
+  // Three steps BCD. Base 10000 -> base 100 -> base 10.
   // div and mod are evaluated simultaneously as, e.g.
   //   (abcdefgh / 10000) << 32 + (abcdefgh % 10000)
-  //      == abcdefgh + (2^32 - 10000) * (abcdefgh / 10000)))
+  //      == abcdefgh + (2**32 - 10000) * (abcdefgh / 10000)))
   // where the division on the RHS is implemented by the usual multiply + shift
   // trick and the fractional bits are masked away.
-  uint64_t abcd_efgh =
-      abcdefgh + (0x100000000 - 10000) * ((abcdefgh * 0x68db8bb) >> 40);
+  uint64_t abcd_efgh = abcdefgh + (0x100000000 - 10000) *
+                                      ((abcdefgh * div10k_sig) >> div10k_exp);
   uint64_t ab_cd_ef_gh =
-      abcd_efgh +
-      (0x10000 - 100) * (((abcd_efgh * 0x147b) >> 19) & 0x7f0000007f);
+      abcd_efgh + (0x10000 - 100) *
+                      (((abcd_efgh * div100_sig) >> div100_exp) & 0x7f0000007f);
   uint64_t a_b_c_d_e_f_g_h =
       ab_cd_ef_gh +
       (0x100 - 10) * (((ab_cd_ef_gh * 0x67) >> 10) & 0xf000f000f000f);
@@ -479,8 +488,6 @@ inline void write8(char* buffer, uint64_t value) noexcept {
   memcpy(buffer, &value, 8);
 }
 
-constexpr uint64_t zeros = 0x0101010101010101u * '0';
-
 // Writes a significand consisting of up to 17 decimal digits (16-17 for
 // normals) and removes trailing zeros.
 auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
@@ -489,7 +496,7 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   struct to_string_constants {
     uint64_t mul_const = 0xabcc77118461cefd;
     uint64_t hundred_million = 100000000;
-    int32_t multipliers32[4] = {0x68db8bb, -10000 + 0x10000, 0x147b000,
+    int32_t multipliers32[4] = {div10k_sig, -10000 + 0x10000, div100_sig << 12,
                                 -100 + 0x10000};
     int16_t multipliers16[8] = {0xce0, -10 + 0x100};
   };
@@ -551,7 +558,7 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 
   buffer += 16 - ((zeroes != 0 ? clz(zeroes) : 64) >> 2);
   return buffer - int(buffer - start == 1);
-#  elif ZMIJ_USE_SSE
+#elif ZMIJ_USE_SSE
   uint32_t abbccddee = uint32_t(value / 100'000'000);
   uint32_t ffgghhii = uint32_t(value % 100'000'000);
   uint32_t a = abbccddee / 100'000'000;
@@ -560,37 +567,49 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
   buffer = write_if_nonzero(buffer, a);
 
   alignas(64) static const struct {
-    __m128i div10000 = _mm_set1_epi64x((1ull << 40) / 10000 + 1);
-    __m128i divmod10000 = _mm_set1_epi64x((1ull << 32) - 10000);
-    __m128i div100 = _mm_set1_epi32((1 << 19) / 100 + 1);
+    __m128i div10k = _mm_set1_epi64x(div10k_sig);
+    __m128i divmod10k = _mm_set1_epi64x((1ull << 32) - 10000);
+    __m128i div100 = _mm_set1_epi32(div100_sig);
     __m128i divmod100 = _mm_set1_epi32((1 << 16) - 100);
     __m128i div10 = _mm_set1_epi16((1 << 16) / 10 + 1);
 #  if ZMIJ_USE_SSE4_1
     __m128i divmod10 = _mm_set1_epi16((1 << 8) - 10);
-    __m128i bswap = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-#  else // !ZMIJ_USE_SSE4_1
+    __m128i bswap =
+        _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+#  else   // !ZMIJ_USE_SSE4_1
     __m128i one_hundred = _mm_set1_epi32(100);
     __m128i moddiv10 = _mm_set1_epi16(10 * (1 << 8) - 1);
-#  endif // ZMIJ_USE_SSE4_1
+#  endif  // ZMIJ_USE_SSE4_1
     __m128i ascii0 = _mm_set1_epi64x(zeros);
   } c;
 
 // The BCD sequences are based on ones provided by Xiang JunBo.
 #  if ZMIJ_USE_SSE4_1
   __m128i x = _mm_set_epi64x(bbccddee, ffgghhii);
-  __m128i y = _mm_add_epi64(x, _mm_mul_epu32(c.divmod10000, _mm_srli_epi64(_mm_mul_epu32(x, c.div10000), 40)));
-  __m128i z = _mm_add_epi64(y, _mm_mullo_epi32(c.divmod100, _mm_srli_epi32(_mm_mulhi_epu16(y, c.div100), 3))); // _mm_mullo_epi32 is SSE 4.1
-  __m128i big_endian_bcd = _mm_add_epi16(z, _mm_mullo_epi16(c.divmod10, _mm_mulhi_epu16(z, c.div10)));
-  __m128i bcd = _mm_shuffle_epi8(big_endian_bcd, c.bswap); // SSSE3
-#  else // !ZMIJ_USE_SSE4_1
+  __m128i y = _mm_add_epi64(
+      x, _mm_mul_epu32(c.divmod10k,
+                       _mm_srli_epi64(_mm_mul_epu32(x, c.div10k), div10k_exp)));
+  __m128i z = _mm_add_epi64(
+      y, _mm_mullo_epi32(c.divmod100,
+                         _mm_srli_epi32(_mm_mulhi_epu16(y, c.div100),
+                                        3)));  // _mm_mullo_epi32 is SSE 4.1
+  __m128i big_endian_bcd = _mm_add_epi16(
+      z, _mm_mullo_epi16(c.divmod10, _mm_mulhi_epu16(z, c.div10)));
+  __m128i bcd = _mm_shuffle_epi8(big_endian_bcd, c.bswap);  // SSSE3
+#  else   // !ZMIJ_USE_SSE4_1
   __m128i x = _mm_set_epi64x(bbccddee, ffgghhii);
-  __m128i y = _mm_add_epi64(x, _mm_mul_epu32(c.divmod10000, _mm_srli_epi64(_mm_mul_epu32(x, c.div10000), 40)));
+  __m128i y = _mm_add_epi64(
+      x, _mm_mul_epu32(c.divmod10k,
+                       _mm_srli_epi64(_mm_mul_epu32(x, c.div10k), div10k_exp)));
   __m128i y_div_100 = _mm_srli_epi16(_mm_mulhi_epu16(y, c.div100), 3);
-  __m128i y_mod_100 = _mm_sub_epi16(y, _mm_mullo_epi16(y_div_100, c.one_hundred));
+  __m128i y_mod_100 =
+      _mm_sub_epi16(y, _mm_mullo_epi16(y_div_100, c.one_hundred));
   __m128i z = _mm_or_si128(_mm_slli_epi32(y_mod_100, 16), y_div_100);
-  __m128i bcd_shuffled = _mm_sub_epi16(_mm_slli_epi16(z, 8), _mm_mullo_epi16(c.moddiv10, _mm_mulhi_epu16(z, c.div10)));
+  __m128i bcd_shuffled =
+      _mm_sub_epi16(_mm_slli_epi16(z, 8),
+                    _mm_mullo_epi16(c.moddiv10, _mm_mulhi_epu16(z, c.div10)));
   __m128i bcd = _mm_shuffle_epi32(bcd_shuffled, _MM_SHUFFLE(0, 1, 2, 3));
-#  endif // ZMIJ_USE_SSE4_1
+#  endif  // ZMIJ_USE_SSE4_1
 
   auto digits = _mm_or_si128(bcd, c.ascii0);
 
@@ -605,7 +624,7 @@ auto write_significand17(char* buffer, uint64_t value) noexcept -> char* {
 
   _mm_storeu_si128((__m128i*)buffer, digits);
   return buffer + len - int(len + (a != 0) == 1);
-#else   // !ZMIJ_USE_NEON && !ZMIJ_USE_SSE
+#else  // !ZMIJ_USE_NEON && !ZMIJ_USE_SSE
   char* start = buffer;
   // Each digit is denoted by a letter so value is abbccddeeffgghhii.
   uint32_t abbccddee = uint32_t(value / 100'000'000);
@@ -862,8 +881,8 @@ auto write(Float value, char* buffer) noexcept -> char* {
     return buffer + 2;
   }
   // 19 is faster or equal to 12 even for 3 digits.
-  constexpr int div_exp = 19, div_sig = (1 << div_exp) / 100 + 1;
-  uint32_t digit = (uint32_t(dec_exp) * div_sig) >> div_exp;  // value / 100
+  uint32_t digit =
+      (uint32_t(dec_exp) * div100_sig) >> div100_exp;  // value / 100
   uint32_t digit_with_nuls = '0' + digit;
   if (is_big_endian()) digit_with_nuls <<= 24;
   memcpy(buffer, &digit_with_nuls, 4);
