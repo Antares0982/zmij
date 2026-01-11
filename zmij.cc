@@ -502,6 +502,10 @@ auto write_significand17(char* buffer, uint64_t value,
   // An optimized version for NEON by Dougall Johnson.
   constexpr int32_t neg10k = -10000 + 0x10000;
   struct to_string_constants {
+#ifdef _MSC_VER
+    using int32x4_t = std::int32_t[4];
+    using int16x8_t = std::int16_t[8];
+#endif
     uint64_t mul_const = 0xabcc77118461cefd;
     uint64_t hundred_million = 100000000;
     int32x4_t multipliers32 = {div10k_sig, neg10k, div100_sig << 12, neg100};
