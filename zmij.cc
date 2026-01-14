@@ -41,6 +41,9 @@ struct dec_fp {
 #else
 #  define ZMIJ_USE_NEON 0
 #endif
+#if ZMIJ_USE_NEON
+#  include <arm_neon.h>
+#endif
 
 #ifdef ZMIJ_USE_SSE
 // Use the provided definition
@@ -51,9 +54,13 @@ struct dec_fp {
 #else
 #  define ZMIJ_USE_SSE 0
 #endif
+#if ZMIJ_USE_SSE
+#  include <immintrin.h>
+#endif
 
 #ifdef ZMIJ_USE_SSE4_1
 // Use the provided definition
+static_assert(!ZMIJ_USE_SSE4_1 || ZMIJ_USE_SSE);
 #elif defined(__SSE4_1__)
 #  define ZMIJ_USE_SSE4_1 ZMIJ_USE_SIMD
 #elif ZMIJ_MSC_VER && \
@@ -61,19 +68,6 @@ struct dec_fp {
 #  define ZMIJ_USE_SSE4_1 ZMIJ_USE_SIMD
 #else
 #  define ZMIJ_USE_SSE4_1 0
-#endif
-
-#if ZMIJ_USE_NEON
-#  include <arm_neon.h>
-#endif
-
-#if ZMIJ_USE_SSE4_1 && !ZMIJ_USE_SSE
-#  error \
-      "User asked for SSE4.1 but SSE is not available or explicitly not requested."
-#endif
-
-#if ZMIJ_USE_SSE
-#  include <immintrin.h>
 #endif
 
 #if defined(__has_builtin) && !defined(ZMIJ_NO_BUILTINS)
