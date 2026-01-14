@@ -77,12 +77,13 @@ taking the best of 3 runs.
 
 ## Differences from Schubfach
 
-* 1 instead of 3 multiplications by powers of 10 in the common case
+* 1 instead of 3 multiplications by a power of 10 in the common case
 * Faster logarithm approximations
 * Faster division and modulo
 * Fewer conditional branches
 * More efficient significand and exponent output
 * Improved storage of powers of 10
+* SIMD support
 
 ## Name
 
