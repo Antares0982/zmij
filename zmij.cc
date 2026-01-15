@@ -828,15 +828,15 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   auto bits = traits::to_bits(value);
   auto bin_exp = traits::get_exp(bits);  // binary exponent
   auto bin_sig = traits::get_sig(bits);  // binary significand
-  bool special = ((bin_exp + 1) & traits::exp_mask) <= 1;
-  bool regular = (bin_sig != 0) | special;
-  if (special) [[ZMIJ_UNLIKELY]] {
+  bool regular = bin_sig != 0;
+  bool subnormal = bin_exp == 0;
+  if (bin_exp == 0 || bin_exp == traits::exp_mask) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) return {0, int(~0u >> 1)};
     if (bin_sig == 0) return {0, 0};
     bin_sig |= traits::implicit_bit;
   }
   bin_sig ^= traits::implicit_bit;
-  auto dec = ::to_decimal<double>(bin_sig, bin_exp, regular, special);
+  auto dec = ::to_decimal<double>(bin_sig, bin_exp, regular, subnormal);
   return {traits::is_negative(bits) ? -dec.sig : dec.sig, dec.exp};
 }
 
