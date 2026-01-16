@@ -70,8 +70,11 @@ def main():
         run(["git", "clone", "https://github.com/vitaut/zmij.git",
              str(workdir)])
 
+        # efc82ab765b00adccc5f096d682b705f082113e5 is a known good commit
+        # with all improvements and regression before it accounted for.
         commits = run(
-            ["git", "rev-list", "--reverse", "HEAD"],
+            ["git", "rev-list", "--reverse", "--topo-order",
+             "efc82ab765b00adccc5f096d682b705f082113e5..HEAD"],
             cwd=workdir
         ).split()
 
