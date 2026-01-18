@@ -299,7 +299,7 @@ template <typename Float> struct float_traits : std::numeric_limits<Float> {
     return bits & (implicit_bit - 1);
   }
   static auto get_exp(sig_type bits) noexcept -> int64_t {
-    return int64_t(bits >> num_sig_bits) & exp_mask;
+    return int64_t((bits << 1) >> (num_sig_bits + 1));
   }
 };
 
