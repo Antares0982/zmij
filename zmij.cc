@@ -282,6 +282,7 @@ template <typename Float> struct float_traits : std::numeric_limits<Float> {
   static constexpr int num_exp_bits = num_bits - num_sig_bits - 1;
   static constexpr int exp_mask = (1 << num_exp_bits) - 1;
   static constexpr int exp_bias = (1 << (num_exp_bits - 1)) - 1;
+  static constexpr int exp_offset = exp_bias + num_sig_bits;
 
   using sig_type = std::conditional_t<num_bits == 64, uint64_t, uint32_t>;
   static constexpr sig_type implicit_bit = sig_type(1) << num_sig_bits;
@@ -389,13 +390,12 @@ struct exp_shift_table {
   using traits = float_traits<double>;
   static constexpr bool enable = true;
   static constexpr int num_exps = traits::exp_mask + 1;
-  static constexpr int offset = traits::num_sig_bits + traits::exp_bias;
   unsigned char data[enable ? num_exps : 1] = {};
 
   constexpr exp_shift_table() {
     if (!enable) return;
     for (int raw_exp = 0; raw_exp < num_exps; ++raw_exp) {
-      int bin_exp = raw_exp - offset;
+      int bin_exp = raw_exp - traits::exp_offset;
       if (raw_exp == 0) ++bin_exp;
       int dec_exp = compute_dec_exp(bin_exp, true);
       data[raw_exp] = do_compute_exp_shift(bin_exp, dec_exp);
@@ -418,7 +418,7 @@ template <int num_bits, bool only_regular = false>
 constexpr ZMIJ_INLINE auto compute_exp_shift(int bin_exp, int dec_exp) noexcept
     -> unsigned char {
   if (num_bits == 64 && exp_shift_table::enable && only_regular)
-    return exp_shifts.data[bin_exp + exp_shift_table::offset];
+    return exp_shifts.data[bin_exp + float_traits<double>::exp_offset];
   return do_compute_exp_shift(bin_exp, dec_exp);
 }
 
@@ -766,12 +766,12 @@ auto to_decimal_schubfach(UInt bin_sig, int64_t bin_exp, bool regular) noexcept
 
 // Here be 🐉s.
 // Converts a binary FP number bin_sig * 2**bin_exp to the shortest decimal
-// representation, where bin_exp = raw_exp - num_sig_bits - exp_bias.
+// representation, where bin_exp = raw_exp - exp_offset.
 template <typename Float, typename UInt>
 ZMIJ_INLINE auto to_decimal_normal(UInt bin_sig, int64_t raw_exp,
                                    bool regular) noexcept -> zmij::dec_fp {
   using traits = float_traits<Float>;
-  int64_t bin_exp = raw_exp - traits::num_sig_bits - traits::exp_bias;
+  int64_t bin_exp = raw_exp - traits::exp_offset;
   constexpr int num_bits = std::numeric_limits<UInt>::digits;
   // An optimization from yy by Yaoyuan Guo:
   while (regular) [[ZMIJ_LIKELY]] {
@@ -881,8 +881,7 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
   if (bin_exp == 0 || bin_exp == traits::exp_mask) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) return {0, int(~0u >> 1)};
     if (bin_sig == 0) return {0, 0};
-    constexpr int exp_offset = traits::num_sig_bits + traits::exp_bias;
-    dec = to_decimal_schubfach<true>(bin_sig, 1 - exp_offset, true);
+    dec = to_decimal_schubfach<true>(bin_sig, 1 - traits::exp_offset, true);
   } else {
     dec = to_decimal_normal<double>(bin_sig | traits::implicit_bit, bin_exp,
                                     bin_sig != 0);
@@ -914,8 +913,7 @@ auto write(Float value, char* buffer) noexcept -> char* {
       memcpy(buffer, "0", 2);
       return buffer + 1;
     }
-    constexpr int exp_offset = traits::num_sig_bits + traits::exp_bias;
-    dec = to_decimal_schubfach<true>(bin_sig, 1 - exp_offset, true);
+    dec = to_decimal_schubfach<true>(bin_sig, 1 - traits::exp_offset, true);
   } else {
     dec = to_decimal_normal<Float>(bin_sig | traits::implicit_bit, bin_exp,
                                    bin_sig != 0);

@@ -40,8 +40,8 @@ const uint64_t pow10[] = {
 
 using traits = float_traits<double>;
 
-constexpr auto debias(int bin_exp_biased) -> int {
-  return bin_exp_biased - (traits::num_sig_bits + traits::exp_bias);
+constexpr auto debias(int raw_exp) -> int {
+  return raw_exp - traits::exp_offset;
 }
 
 inline auto verify(uint64_t bits, uint64_t bin_sig, int bin_exp, int raw_exp,
