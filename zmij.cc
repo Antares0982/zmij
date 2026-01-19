@@ -526,6 +526,22 @@ constexpr auto pack8(uint8_t a, uint8_t b, uint8_t c, uint8_t d,  //
 // the significand has length 16.
 auto write_significand17(char* buffer, uint64_t value,
                          bool has17digits) noexcept -> char* {
+  if (!ZMIJ_USE_NEON && !ZMIJ_USE_SSE) {
+    char* start = buffer + 1;
+    // Each digit is denoted by a letter so value is abbccddeeffgghhii.
+    uint32_t abbccddee = uint32_t(value / 100'000'000);
+    uint32_t ffgghhii = uint32_t(value % 100'000'000);
+    buffer = write_if(start, abbccddee / 100'000'000, has17digits);
+    uint64_t bcd = to_bcd8(abbccddee % 100'000'000);
+    write8(buffer, bcd | zeros);
+    if (ffgghhii == 0) {
+      buffer += count_trailing_nonzeros(bcd);
+      return buffer - int(buffer - start == 1);
+    }
+    bcd = to_bcd8(ffgghhii);
+    write8(buffer + 8, bcd | zeros);
+    return buffer + 8 + count_trailing_nonzeros(bcd);
+  }
 #if ZMIJ_USE_NEON
   // An optimized version for NEON by Dougall Johnson.
   constexpr int32_t neg10k = -10000 + 0x10000;
@@ -677,22 +693,7 @@ auto write_significand17(char* buffer, uint64_t value,
 
   _mm_storeu_si128(reinterpret_cast<__m128i*>(buffer), digits);
   return buffer + ((last_digit != 0) ? 17 : len - (len == 1));
-#else     // !ZMIJ_USE_NEON && !ZMIJ_USE_SSE
-  char* start = buffer + 1;
-  // Each digit is denoted by a letter so value is abbccddeeffgghhii.
-  uint32_t abbccddee = uint32_t(value / 100'000'000);
-  uint32_t ffgghhii = uint32_t(value % 100'000'000);
-  buffer = write_if(start, abbccddee / 100'000'000, has17digits);
-  uint64_t bcd = to_bcd8(abbccddee % 100'000'000);
-  write8(buffer, bcd | zeros);
-  if (ffgghhii == 0) {
-    buffer += count_trailing_nonzeros(bcd);
-    return buffer - int(buffer - start == 1);
-  }
-  bcd = to_bcd8(ffgghhii);
-  write8(buffer + 8, bcd | zeros);
-  return buffer + 8 + count_trailing_nonzeros(bcd);
-#endif
+#endif  // ZMIJ_USE_SSE
 }
 
 // Writes a significand consisting of up to 9 decimal digits (7-9 for normals)
