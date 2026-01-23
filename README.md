@@ -35,10 +35,10 @@ int main() {
 
 ## Performance
 
-More than 4x faster than [Ryū](https://github.com/ulfjack/ryu) used by multiple
-C++ standard library implementations, 9x faster than [double-conversion](
-https://github.com/google/double-conversion) and ~2.5x faster than
-[Schubfach](https://github.com/vitaut/schubfach)
+Żmij v1 is more than 4x faster than [Ryū](https://github.com/ulfjack/ryu)
+used by multiple C++ standard library implementations, 9x faster than
+[double-conversion](https://github.com/google/double-conversion) and ~2.5x
+faster than [Schubfach](https://github.com/vitaut/schubfach)
 on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark) run on Apple M1.
 
 | Function          | Time (ns) | Speedup |
@@ -58,15 +58,17 @@ on [dtoa-benchmark](https://github.com/fmtlib/dtoa-benchmark) run on Apple M1.
 
 **Conversion time (smaller is better):**
 
-<img width="726" height="313" alt="image" src="https://github.com/user-attachments/assets/c36c95c6-52a1-42a9-880e-d7621112f7d9" />
+<img width="726" height="313" alt="image"
+     src="https://github.com/user-attachments/assets/c36c95c6-52a1-42a9-880e-d7621112f7d9" />
 
 `ostringstream` and `sprintf` are excluded due to their significantly slower
 performance.
 
-<img width="739" height="605" alt="image" src="https://github.com/user-attachments/assets/e6452189-5a4c-4ba2-9e17-f720e263dd5d" />
+<img width="739" height="605" alt="image"
+     src="https://github.com/user-attachments/assets/e6452189-5a4c-4ba2-9e17-f720e263dd5d" />
 
-On EPYC Milan (AMD64) running Linux, Żmij is approximately **2.8× faster than Ryū** and
-**5× faster than double-conversion** when compiled with GCC 11.5.
+On EPYC Milan (AMD64) running Linux, Żmij is approximately **2.8× faster than
+Ryū** and **5× faster than double-conversion** when compiled with GCC 11.5.
 
 | Function            | Time (ns) | Speedup |
 |---------------------|----------:|--------:|
@@ -83,9 +85,11 @@ On EPYC Milan (AMD64) running Linux, Żmij is approximately **2.8× faster than 
 | zmij                | 19.194    | 49.96x  |
 | null                | 2.766     | 346.72x |
 
-<img width="741" height="327" alt="image" src="https://github.com/user-attachments/assets/e7f0ec3f-7317-4c60-b33d-c106215f1ee6" />
+<img width="741" height="327" alt="image"
+     src="https://github.com/user-attachments/assets/e7f0ec3f-7317-4c60-b33d-c106215f1ee6" />
 
-<img width="761" height="616" alt="image" src="https://github.com/user-attachments/assets/cece5726-006c-4712-bf09-6ca62c27ef29" />
+<img width="761" height="616" alt="image"
+     src="https://github.com/user-attachments/assets/cece5726-006c-4712-bf09-6ca62c27ef29" />
 
 ## Compile time
 
