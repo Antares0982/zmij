@@ -964,7 +964,7 @@ auto write(Float value, char* buffer) noexcept -> char* {
   if (traits::num_bits == 64) {
     bool has17digits = dec.sig >= uint64_t(1e16);
     dec_exp += traits::max_digits10 - 2 + has17digits;
-    if (dec_exp >= -4 && dec_exp < 16)
+    if (dec_exp >= -4 && dec_exp < compute_dec_exp(traits::digits + 1, true))
       return write_fixed(buffer, dec.sig, dec_exp, has17digits, dec.sig_div10);
     buffer =
         write_significand17(buffer + 1, dec.sig, has17digits, dec.sig_div10);
