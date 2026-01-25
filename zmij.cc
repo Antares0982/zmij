@@ -774,8 +774,8 @@ ZMIJ_INLINE auto to_decimal_schubfach(UInt bin_sig, int64_t bin_exp,
 // Converts a binary FP number bin_sig * 2**bin_exp to the shortest decimal
 // representation, where bin_exp = raw_exp - exp_offset.
 template <typename Float, typename UInt>
-ZMIJ_INLINE auto to_decimal_normal(UInt bin_sig, int64_t raw_exp,
-                                   bool regular) noexcept -> to_decimal_result {
+ZMIJ_INLINE auto to_decimal_fast(UInt bin_sig, int64_t raw_exp,
+                                 bool regular) noexcept -> to_decimal_result {
   using traits = float_traits<Float>;
   int64_t bin_exp = raw_exp - traits::exp_offset;
   constexpr int num_bits = std::numeric_limits<UInt>::digits;
@@ -934,8 +934,8 @@ inline auto to_decimal(double value) noexcept -> dec_fp {
     bin_exp = 1;
     bin_sig |= traits::implicit_bit;
   }
-  auto dec = to_decimal_normal<double>(bin_sig ^ traits::implicit_bit, bin_exp,
-                                       bin_sig != 0);
+  auto dec = to_decimal_fast<double>(bin_sig ^ traits::implicit_bit, bin_exp,
+                                     bin_sig != 0);
   return {dec.sig, dec.exp, negative};
 }
 
@@ -954,6 +954,7 @@ auto write(Float value, char* buffer) noexcept -> char* {
   buffer += traits::is_negative(bits);
 
   to_decimal_result dec;
+  constexpr uint64_t threshold = uint64_t(traits::num_bits == 64 ? 1e16 : 1e8);
   if (bin_exp == 0 || bin_exp == traits::exp_mask) [[ZMIJ_UNLIKELY]] {
     if (bin_exp != 0) {
       memcpy(buffer, bin_sig == 0 ? "inf" : "nan", 4);
@@ -964,17 +965,17 @@ auto write(Float value, char* buffer) noexcept -> char* {
       return buffer + 1;
     }
     dec = to_decimal_schubfach(bin_sig, 1 - traits::exp_offset, true);
-    while (dec.sig < uint64_t(traits::num_bits == 64 ? 1e16 : 1e8)) {
+    while (dec.sig < threshold) {
       dec.sig *= 10;
       --dec.exp;
     }
     dec.set_div10(dec.sig / 10);
   } else {
-    dec = to_decimal_normal<Float>(bin_sig | traits::implicit_bit, bin_exp,
-                                   bin_sig != 0);
+    dec = to_decimal_fast<Float>(bin_sig | traits::implicit_bit, bin_exp,
+                                 bin_sig != 0);
   }
   int dec_exp = dec.exp;
-  bool extra_digit = dec.sig >= uint64_t(traits::num_bits == 64 ? 1e16 : 1e8);
+  bool extra_digit = dec.sig >= threshold;
   dec_exp += traits::max_digits10 - 2 + extra_digit;
   if (traits::num_bits == 32 && dec.sig < uint32_t(1e7)) [[ZMIJ_UNLIKELY]] {
     dec.sig *= 10;
