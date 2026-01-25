@@ -365,7 +365,8 @@ alignas(64) constexpr pow10_significands_table pow10_significands;
 
 // Computes the decimal exponent as floor(log10(2**bin_exp)) if regular or
 // floor(log10(3/4 * 2**bin_exp)) otherwise, without branching.
-constexpr auto compute_dec_exp(int bin_exp, bool regular) noexcept -> int {
+constexpr auto compute_dec_exp(int bin_exp, bool regular = true) noexcept
+    -> int {
   assert(bin_exp >= -1334 && bin_exp <= 2620);
   // log10_3_over_4_sig = -log10(3/4) * 2**log10_2_exp rounded to a power of 2
   constexpr int log10_3_over_4_sig = 131'072;
@@ -395,7 +396,7 @@ struct exp_shift_table {
     for (int raw_exp = 0; raw_exp < sizeof(data) && enable; ++raw_exp) {
       int bin_exp = raw_exp - float_traits<double>::exp_offset;
       if (raw_exp == 0) ++bin_exp;
-      int dec_exp = compute_dec_exp(bin_exp, true);
+      int dec_exp = compute_dec_exp(bin_exp);
       data[raw_exp] = do_compute_exp_shift(bin_exp, dec_exp);
     }
   }
@@ -781,7 +782,7 @@ ZMIJ_INLINE auto to_decimal_normal(UInt bin_sig, int64_t raw_exp,
   // An optimization from yy by Yaoyuan Guo:
   while (regular) [[ZMIJ_LIKELY]] {
     int dec_exp = use_umul128_hi64 ? umul128_hi64(bin_exp, 0x4d10500000000000)
-                                   : compute_dec_exp(bin_exp, true);
+                                   : compute_dec_exp(bin_exp);
     unsigned char exp_shift =
         compute_exp_shift<num_bits, true>(bin_exp, dec_exp);
     uint128 pow10 = pow10_significands[-dec_exp];
@@ -981,7 +982,7 @@ auto write(Float value, char* buffer) noexcept -> char* {
   }
 
   // Write significand.
-  if (dec_exp >= -4 && dec_exp < compute_dec_exp(traits::digits + 1, true)) {
+  if (dec_exp >= -4 && dec_exp < compute_dec_exp(traits::digits + 1)) {
     return write_fixed<traits::num_bits>(buffer, dec.sig, dec_exp, extra_digit,
                                          dec.sig_div10);
   }
