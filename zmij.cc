@@ -506,8 +506,9 @@ inline auto read8(char* buffer) noexcept -> uint64_t {
 // (8-9 for normals) for float. The significant digits start from buffer[1].
 // buffer[0] may contain '0' after this function if the leading digit is zero.
 template <int num_bits, bool use_sse = ZMIJ_USE_SSE != 0 && num_bits == 64>
-auto write_significand(char* buffer, uint64_t value, bool extra_digit,
-                       long long value_div10) noexcept -> char* {
+ZMIJ_INLINE auto write_significand(char* buffer, uint64_t value,
+                                   bool extra_digit,
+                                   long long value_div10) noexcept -> char* {
   if (num_bits == 32) {
     buffer = write_if(buffer, value / 100'000'000, extra_digit);
     uint64_t bcd = to_bcd8(value % 100'000'000);
@@ -662,8 +663,8 @@ auto write_significand(char* buffer, uint64_t value, bool extra_digit,
 #  if ZMIJ_USE_SSE4_1
   // _mm_mullo_epi32 is SSE 4.1
   __m128i z = _mm_add_epi64(
-      y, _mm_mullo_epi32(neg100,
-                         _mm_srli_epi32(_mm_mulhi_epu16(y, div100), 3)));
+      y,
+      _mm_mullo_epi32(neg100, _mm_srli_epi32(_mm_mulhi_epu16(y, div100), 3)));
   __m128i big_endian_bcd =
       _mm_add_epi16(z, _mm_mullo_epi16(neg10, _mm_mulhi_epu16(z, div10)));
   __m128i bcd = _mm_shuffle_epi8(big_endian_bcd, bswap);  // SSSE3
@@ -690,7 +691,7 @@ auto write_significand(char* buffer, uint64_t value, bool extra_digit,
 
   _mm_storeu_si128(reinterpret_cast<__m128i*>(buffer), digits);
   return buffer + len;
-#endif    // ZMIJ_USE_SSE
+#endif  // ZMIJ_USE_SSE
 }
 
 struct to_decimal_result {
