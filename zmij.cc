@@ -598,16 +598,12 @@ auto write_significand(char* buffer, uint64_t value, bool extra_digit,
   buffer += 16 - ((zeroes != 0 ? clz(zeroes) : 64) >> 2);
   return buffer;
 #elif ZMIJ_USE_SSE
-  uint32_t last_digit = value - value_div10 * 10;
+  uint32_t abbccddee = uint32_t(value / 100'000'000);
+  uint32_t ffgghhii = uint32_t(value % 100'000'000);
+  uint32_t a = abbccddee / 100'000'000;
+  uint32_t bbccddee = abbccddee % 100'000'000;
 
-  // We always write 17 digits into the buffer, but the first one can be zero.
-  // buffer points to the second place in the output buffer to allow for the
-  // insertion of the decimal point, so we can use the first place as scratch.
-  buffer += extra_digit - 1;
-  buffer[16] = char(last_digit + '0');
-
-  uint32_t abcdefgh = value_div10 / uint64_t(1e8);
-  uint32_t ijklmnop = value_div10 % uint64_t(1e8);
+  buffer = write_if(buffer, a, extra_digit);
 
   alignas(64) static constexpr struct {
     static constexpr auto splat64(uint64_t x) -> uint128 { return {x, x}; }
@@ -658,20 +654,20 @@ auto write_significand(char* buffer, uint64_t value, bool extra_digit,
 #  endif
   const __m128i zeros = _mm_load_si128(ptr(&c->zeros));
 
-  // The BCD sequences are based on the ones provided by Xiang JunBo.
-  __m128i x = _mm_set_epi64x(abcdefgh, ijklmnop);
+  // The BCD sequences are based on ones provided by Xiang JunBo.
+  __m128i x = _mm_set_epi64x(bbccddee, ffgghhii);
   __m128i y = _mm_add_epi64(
       x, _mm_mul_epu32(neg10k,
                        _mm_srli_epi64(_mm_mul_epu32(x, div10k), div10k_exp)));
 #  if ZMIJ_USE_SSE4_1
   // _mm_mullo_epi32 is SSE 4.1
   __m128i z = _mm_add_epi64(
-      y,
-      _mm_mullo_epi32(neg100, _mm_srli_epi32(_mm_mulhi_epu16(y, div100), 3)));
+      y, _mm_mullo_epi32(neg100,
+                         _mm_srli_epi32(_mm_mulhi_epu16(y, div100), 3)));
   __m128i big_endian_bcd =
       _mm_add_epi16(z, _mm_mullo_epi16(neg10, _mm_mulhi_epu16(z, div10)));
   __m128i bcd = _mm_shuffle_epi8(big_endian_bcd, bswap);  // SSSE3
-#  else
+#  else   // !ZMIJ_USE_SSE4_1
   __m128i y_div_100 = _mm_srli_epi16(_mm_mulhi_epu16(y, div100), 3);
   __m128i y_mod_100 = _mm_sub_epi16(y, _mm_mullo_epi16(y_div_100, hundred));
   __m128i z = _mm_or_si128(_mm_slli_epi32(y_mod_100, 16), y_div_100);
@@ -685,16 +681,15 @@ auto write_significand(char* buffer, uint64_t value, bool extra_digit,
 
   // Count leading zeros.
   __m128i mask128 = _mm_cmpgt_epi8(bcd, _mm_setzero_si128());
-  uint32_t mask = _mm_movemask_epi8(mask128);
-  // We don't need a zero-check here: if the mask were zero, either the
-  // significand is zero which is handled elsewhere or the only non-zero digit
-  // is the last digit which we factored off. But in that case the number would
-  // be printed with a different exponent that shifts the last digit into the
-  // first position.
-  auto len = size_t(64) - clz(mask);  // size_t for native arithmetic
+  uint64_t mask = _mm_movemask_epi8(mask128);
+#  if defined(__LZCNT__) && !defined(ZMIJ_NO_BUILTINS)
+  auto len = 32 - _lzcnt_u32(mask);
+#  else
+  auto len = 63 - clz((mask << 1) | 1);
+#  endif
 
   _mm_storeu_si128(reinterpret_cast<__m128i*>(buffer), digits);
-  return buffer + (last_digit != 0 ? 17 : len);
+  return buffer + len;
 #endif    // ZMIJ_USE_SSE
 }
 
