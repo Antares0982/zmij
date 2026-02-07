@@ -635,8 +635,12 @@ const uint128 expected[] = {
 TEST(pow10_test, verify) {
   constexpr int dec_exp_min = -292;
   for (int i = 0; i < int(sizeof(expected) / sizeof(*expected)); ++i) {
-    EXPECT_EQ(pow10_significands[dec_exp_min + i].hi, expected[i].hi);
-    EXPECT_EQ(pow10_significands[dec_exp_min + i].lo, expected[i].lo);
+    auto actual = pow10_significands[dec_exp_min + i];
+    EXPECT_EQ(actual.hi, expected[i].hi);
+    auto diff = int64_t(actual.lo - expected[i].lo);
+    EXPECT_LE(std::abs(diff), pow10_significands_table::compress ? 1 : 0)
+        << "i=" << i << " actual.lo=" << actual.lo
+        << " expected.lo=" << expected[i].lo;
   }
 }
 

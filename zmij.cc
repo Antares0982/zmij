@@ -329,17 +329,56 @@ template <typename Float> struct float_traits : std::numeric_limits<Float> {
   }
 };
 
+constexpr auto floor_log2_pow10(int e) noexcept -> int {
+  return e * 1741647 >> 19;
+}
+
+constexpr uint64_t powers_of_5[] = {
+    0x0000000000000001, 0x0000000000000005, 0x0000000000000019,
+    0x000000000000007d, 0x0000000000000271, 0x0000000000000c35,
+    0x0000000000003d09, 0x000000000001312d, 0x000000000005f5e1,
+    0x00000000001dcd65, 0x00000000009502f9, 0x0000000002e90edd,
+    0x000000000e8d4a51, 0x0000000048c27395, 0x000000016bcc41e9,
+    0x000000071afd498d, 0x0000002386f26fc1, 0x000000b1a2bc2ec5,
+    0x000003782dace9d9, 0x00001158e460913d, 0x000056bc75e2d631,
+    0x0001b1ae4d6e2ef5, 0x000878678326eac9, 0x002a5a058fc295ed,
+    0x00d3c21bcecceda1, 0x0422ca8b0a00a425, 0x14adf4b7320334b9};
+
 // 128-bit significands of powers of 10 rounded down.
 // Generated using 192-bit arithmetic method by Dougall Johnson.
 struct pow10_significands_table {
   static constexpr bool compress = false;
-  static constexpr bool split_tables = ZMIJ_AARCH64 != 0;
+  static constexpr bool split_tables = !compress && ZMIJ_AARCH64 != 0;
   static constexpr int num_pow10 = 617;
   static constexpr int compression_ratio = compress ? 27 : 1;
   uint64_t data[(num_pow10 / compression_ratio + compress) * 2] = {};
 
   ZMIJ_CONSTEXPR auto operator[](int dec_exp) const noexcept -> uint128 {
     constexpr int dec_exp_min = -292;
+    if (compress) {
+      int base_index = (dec_exp - dec_exp_min) / compression_ratio;
+      int base_dec_exp = base_index * compression_ratio + dec_exp_min;
+      int offset = dec_exp - base_dec_exp;
+
+      uint64_t base_hi = data[base_index * 2];
+      uint64_t base_lo = data[base_index * 2 + 1];
+      if (offset == 0) return {base_hi, base_lo};
+
+      int shift = floor_log2_pow10(base_dec_exp + offset) -
+                  floor_log2_pow10(base_dec_exp) - offset;
+
+      uint64_t pow5 = powers_of_5[offset];
+      uint128_t p_hi = umul128(base_hi, pow5);
+      uint128_t p_lo = umul128(base_lo, pow5);
+
+      uint64_t r_hi = uint64_t(p_hi >> 64);
+      uint64_t r_lo = uint64_t(p_hi) + uint64_t(p_lo >> 64);
+      if (r_lo < uint64_t(p_hi)) ++r_hi;
+
+      uint64_t lo = ((uint64_t(p_lo) >> shift) | (r_lo << (64 - shift))) + 1;
+      uint64_t hi = (r_lo >> shift) | (r_hi << (64 - shift));
+      return {lo != 0 ? hi : hi + 1, lo};
+    }
     if (!split_tables) {
       int index = (dec_exp - dec_exp_min) * 2;
       return {data[index], data[index + 1]};
@@ -363,13 +402,12 @@ struct pow10_significands_table {
     uint192 current = {0xe000000000000000, 0x25e8e89c13bb0f7a,
                        0xff77b1fcbebcdc4f};
     uint64_t ten = 0xa000000000000000;
-    constexpr int table_size = sizeof(data) / (sizeof(*data) * 2);
     for (int i = 0; i < num_pow10; ++i) {
       if (i % compression_ratio == 0) {
         int index = i / compression_ratio;
         if (split_tables) {
-          data[table_size - index - 1] = current.w2;
-          data[table_size * 2 - index - 1] = current.w1;
+          data[num_pow10 - index - 1] = current.w2;
+          data[num_pow10 * 2 - index - 1] = current.w1;
         } else {
           data[index * 2] = current.w2;
           data[index * 2 + 1] = current.w1;
