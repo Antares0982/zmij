@@ -80,25 +80,6 @@ static_assert(!ZMIJ_USE_SSE4_1 || ZMIJ_USE_SSE);
 #else
 #  define ZMIJ_HAS_ATTRIBUTE(x) 0
 #endif
-#ifdef __has_cpp_attribute
-#  define ZMIJ_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
-#else
-#  define ZMIJ_HAS_CPP_ATTRIBUTE(x) 0
-#endif
-
-#if ZMIJ_HAS_CPP_ATTRIBUTE(likely) && ZMIJ_HAS_CPP_ATTRIBUTE(unlikely)
-#  define ZMIJ_LIKELY likely
-#  define ZMIJ_UNLIKELY unlikely
-#else
-#  define ZMIJ_LIKELY
-#  define ZMIJ_UNLIKELY
-#endif
-
-#if ZMIJ_HAS_CPP_ATTRIBUTE(maybe_unused)
-#  define ZMIJ_MAYBE_UNUSED [[maybe_unused]]
-#else
-#  define ZMIJ_MAYBE_UNUSED
-#endif
 
 #if ZMIJ_HAS_ATTRIBUTE(always_inline)
 #  define ZMIJ_INLINE __attribute__((always_inline)) inline
@@ -173,11 +154,11 @@ typedef struct {
   uint64_t lo;
 } uint128;
 
-ZMIJ_MAYBE_UNUSED static inline uint64_t uint128_to_uint64(uint128 u) {
+static inline uint64_t uint128_to_uint64(uint128 u) {
   return u.lo;
 }
 
-ZMIJ_MAYBE_UNUSED static inline uint128 uint128_add(uint128 lhs, uint128 rhs) {
+static inline uint128 uint128_add(uint128 lhs, uint128 rhs) {
 #ifdef _M_AMD64
   uint64_t lo, hi;
   _addcarry_u64(_addcarry_u64(0, lhs.lo, rhs.lo, &lo), lhs.hi, rhs.hi, &hi);
@@ -204,8 +185,7 @@ typedef unsigned __int128 uint128_t;
 typedef uint128 uint128_t;
 #endif  // ZMIJ_USE_INT128
 
-ZMIJ_MAYBE_UNUSED static inline uint128_t uint128_rshift(uint128_t u,
-                                                         int shift) {
+static inline uint128_t uint128_rshift(uint128_t u, int shift) {
 #if ZMIJ_USE_INT128
   return u >> shift;
 #else
